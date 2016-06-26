@@ -1,0 +1,6 @@
+[package]
+name = "dpl"
+version = "0.1.0"
+authors = ["James Hall <james_hall@live.ca>"]
+
+[dependencies]
