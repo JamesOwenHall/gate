@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
+use BinaryOp::*;
 use Data::*;
 use Expression::*;
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum Data {
     Nil,
     Boolean(bool),
@@ -20,6 +21,7 @@ pub enum Expression {
     Variable(String),
     Assignment{left: String, right: Box<Expression>},
     FunctionCall{name: String, args: Vec<Expression>},
+    BinaryExpr{left: Box<Expression>, op: BinaryOp, right: Box<Expression>},
 }
 
 impl Expression {
@@ -53,6 +55,40 @@ impl Expression {
 
                 f(&new_args)
             },
+            &BinaryExpr{ref left, ref op, ref right} => {
+                let (left_data, right_data) = (left.eval(p), right.eval(p));
+                op.eval(&left_data, &right_data)
+            },
+        }
+    }
+}
+
+#[derive(Clone,Debug)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Eq,
+    Lt,
+    LtEq,
+    Gt,
+    GtEq,
+}
+
+impl BinaryOp {
+    fn eval(&self, left: &Data, right: &Data) -> Data {
+        match (self, left, right) {
+            (&Add, &Number(l), &Number(r)) => Number(l+r),
+            (&Sub, &Number(l), &Number(r)) => Number(l-r),
+            (&Mul, &Number(l), &Number(r)) => Number(l*r),
+            (&Div, &Number(l), &Number(r)) => Number(l/r),
+            (&Eq, _, _) => Boolean(left == right),
+            (&Lt, &Number(l), &Number(r)) => Boolean(l < r),
+            (&LtEq, &Number(l), &Number(r)) => Boolean(l <= r),
+            (&Gt, &Number(l), &Number(r)) => Boolean(l > r),
+            (&GtEq, &Number(l), &Number(r)) => Boolean(l >= r),
+            _ => Nil,
         }
     }
 }
@@ -86,6 +122,8 @@ pub fn println(v: &Vec<Data>) -> Data {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::BinaryOp::*;
+    use super::Data::*;
     use super::Expression::*;
 
     #[test]
@@ -103,6 +141,58 @@ mod tests {
         let mut p = Program::new();
         for exp in ast {
             p.eval(&exp);
+        }
+    }
+
+    #[test]
+    fn test_binary_expr() {
+        let cases = vec![
+            // Add
+            (Add, Number(1.0), Number(2.0), Number(3.0)),
+            (Add, Boolean(false), Number(2.0), Nil),
+            (Add, Number(2.0), Str("1.0".to_owned()), Nil),
+            // Sub
+            (Sub, Number(1.0), Number(2.0), Number(-1.0)),
+            (Sub, Boolean(false), Number(2.0), Nil),
+            (Sub, Number(2.0), Str("1.0".to_owned()), Nil),
+            // Mul
+            (Mul, Number(1.5), Number(2.0), Number(3.0)),
+            (Mul, Boolean(false), Number(2.0), Nil),
+            (Mul, Number(2.0), Str("1.0".to_owned()), Nil),
+            // Div
+            (Div, Number(1.0), Number(2.0), Number(0.5)),
+            (Div, Boolean(false), Number(2.0), Nil),
+            (Div, Number(2.0), Str("1.0".to_owned()), Nil),
+            // Eq
+            (Eq, Number(2.0), Number(2.0), Boolean(true)),
+            (Eq, Number(-2.0), Number(2.0), Boolean(false)),
+            (Eq, Str("foo".to_owned()), Str("foo".to_owned()), Boolean(true)),
+            (Eq, Str("foo".to_owned()), Str("bar".to_owned()), Boolean(false)),
+            (Eq, Boolean(false), Boolean(false), Boolean(true)),
+            (Eq, Boolean(true), Boolean(true), Boolean(true)),
+            (Eq, Boolean(true), Boolean(false), Boolean(false)),
+            (Eq, Nil, Boolean(false), Boolean(false)),
+            (Eq, Nil, Nil, Boolean(true)),
+            // Lt
+            (Lt, Number(-1.0), Number(0.5), Boolean(true)),
+            (Lt, Number(1.0), Number(1.0), Boolean(false)),
+            (Lt, Number(1.0), Number(0.5), Boolean(false)),
+            // LtEq
+            (LtEq, Number(-1.0), Number(0.5), Boolean(true)),
+            (LtEq, Number(1.0), Number(1.0), Boolean(true)),
+            (LtEq, Number(1.0), Number(0.5), Boolean(false)),
+            // Gt
+            (Gt, Number(-1.0), Number(0.5), Boolean(false)),
+            (Gt, Number(1.0), Number(1.0), Boolean(false)),
+            (Gt, Number(1.0), Number(0.5), Boolean(true)),
+            // GtEq
+            (GtEq, Number(-1.0), Number(0.5), Boolean(false)),
+            (GtEq, Number(1.0), Number(1.0), Boolean(true)),
+            (GtEq, Number(1.0), Number(0.5), Boolean(true)),
+        ];
+
+        for (op, left, right, exp) in cases {
+            assert_eq!(op.eval(&left, &right), exp);
         }
     }
 }
