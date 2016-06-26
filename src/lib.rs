@@ -1,8 +1,60 @@
 use std::collections::HashMap;
 
-pub trait Expression {
-    fn eval(&self, p: &mut Program) -> Data;
-    fn clone_expr(&self) -> Box<Expression>;
+use Data::*;
+use Expression::*;
+
+#[derive(Clone,Debug)]
+pub enum Data {
+    Nil,
+    Boolean(bool),
+    Number(f64),
+    Str(String),
+}
+
+#[derive(Clone,Debug)]
+pub enum Expression {
+    NilLiteral,
+    BooleanLiteral(bool),
+    NumberLiteral(f64),
+    StrLiteral(String),
+    Variable(String),
+    Assignment{left: String, right: Box<Expression>},
+    FunctionCall{name: String, args: Vec<Expression>},
+}
+
+impl Expression {
+    pub fn eval(&self, p: &mut Program) -> Data {
+        match self {
+            &NilLiteral => Nil,
+            &BooleanLiteral(b) => Boolean(b),
+            &NumberLiteral(n) => Number(n),
+            &StrLiteral(ref s) => Str(s.clone()),
+            &Variable(ref name) => {
+                match p.vars.get(name) {
+                    Some(d) => d.clone(),
+                    None => Nil,
+                }
+            },
+            &Assignment{ref left, ref right} => {
+                let res = right.eval(p);
+                p.vars.insert(left.clone(), res.clone());
+                res
+            },
+            &FunctionCall{ref name, ref args} => {
+                let f = match name.as_ref() {
+                    "println" => println,
+                    _ => return Nil,
+                };
+
+                let mut new_args = Vec::new();
+                for item in args.iter() {
+                    new_args.push(item.eval(p));
+                }
+
+                f(&new_args)
+            },
+        }
+    }
 }
 
 pub struct Program {
@@ -23,120 +75,6 @@ impl Program {
     }
 }
 
-#[derive(Clone,Debug)]
-pub enum Data {
-    Nil,
-    Boolean(bool),
-    Number(f64),
-    Str(String),
-}
-
-impl Expression for Data {
-    fn eval(&self, _: &mut Program) -> Data {
-        self.clone()
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct NilLiteral;
-
-impl Expression for NilLiteral {
-    fn eval(&self, _: &mut Program) -> Data {
-        Data::Nil
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct BooleanLiteral {
-    pub val: bool,
-}
-
-impl Expression for BooleanLiteral {
-    fn eval(&self, _: &mut Program) -> Data {
-        Data::Boolean(self.val)
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct NumberLiteral {
-    pub val: f64,
-}
-
-impl Expression for NumberLiteral {
-    fn eval(&self, _: &mut Program) -> Data {
-        Data::Number(self.val)
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct StrLiteral {
-    pub val: String,
-}
-
-impl Expression for StrLiteral {
-    fn eval(&self, _: &mut Program) -> Data {
-        Data::Str(self.val.clone())
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct Variable {
-    pub name: String,
-}
-
-impl Expression for Variable {
-    fn eval(&self, p: &mut Program) -> Data {
-        match p.vars.get(&self.name) {
-            Some(d) => d.clone(),
-            None => Data::Nil,
-        }
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-pub struct Assignment {
-    pub left: Variable,
-    pub right: Box<Expression>,
-}
-
-impl Expression for Assignment {
-    fn eval(&self, p: &mut Program) -> Data {
-        let res = self.right.eval(p);
-        p.vars.insert(self.left.name.clone(), res.clone());
-        res
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        Box::new(Assignment {
-            left: self.left.clone(),
-            right: self.right.clone_expr(),
-        })
-    }
-}
-
 pub fn println(v: &Vec<Data>) -> Data {
     for item in v {
         print!("{:?}", item);
@@ -145,58 +83,26 @@ pub fn println(v: &Vec<Data>) -> Data {
     Data::Nil
 }
 
-pub struct FunctionCall {
-    pub name: String,
-    pub args: Vec<Box<Expression>>,
-}
-
-impl Expression for FunctionCall {
-    fn eval(&self, p: &mut Program) -> Data {
-        let f = match self.name.as_ref() {
-            "println" => println,
-            _ => return Data::Nil,
-        };
-
-        let mut args = Vec::new();
-        for item in self.args.iter() {
-            args.push(item.eval(p));
-        }
-
-        f(&args)
-    }
-
-    fn clone_expr(&self) -> Box<Expression> {
-        let mut args = Vec::new();
-        for item in self.args.iter() {
-            args.push(item.clone_expr());
-        }
-
-        Box::new(FunctionCall {
-            name: self.name.clone(),
-            args: args,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::Expression::*;
 
     #[test]
     fn test_things() {
-        let mut ast: Vec<Box<Expression>> = Vec::new();
-        ast.push(Box::new(Assignment {
-            left: Variable{name: "x".to_owned()},
-            right: Box::new(NumberLiteral{val: 2.0}),
-        }));
-        ast.push(Box::new(FunctionCall {
+        let mut ast: Vec<Expression> = Vec::new();
+        ast.push(Assignment {
+            left: "x".to_owned(),
+            right: Box::new(NumberLiteral(2.0)),
+        });
+        ast.push(FunctionCall {
             name: "println".to_owned(),
-            args: vec![Box::new(Variable{name: "x".to_owned()})]
-        }));
+            args: vec![Variable("x".to_owned())]
+        });
 
         let mut p = Program::new();
-        for e in ast {
-            p.eval(e.as_ref());
+        for exp in ast {
+            p.eval(&exp);
         }
     }
 }
