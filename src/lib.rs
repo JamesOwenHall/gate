@@ -42,6 +42,64 @@ impl Expression for Data {
 }
 
 #[derive(Clone)]
+pub struct NilLiteral;
+
+impl Expression for NilLiteral {
+    fn eval(&self, _: &mut Program) -> Data {
+        Data::Nil
+    }
+
+    fn clone_expr(&self) -> Box<Expression> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Clone)]
+pub struct BooleanLiteral {
+    pub val: bool,
+}
+
+impl Expression for BooleanLiteral {
+    fn eval(&self, _: &mut Program) -> Data {
+        Data::Boolean(self.val)
+    }
+
+    fn clone_expr(&self) -> Box<Expression> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Clone)]
+pub struct NumberLiteral {
+    pub val: f64,
+}
+
+impl Expression for NumberLiteral {
+    fn eval(&self, _: &mut Program) -> Data {
+        Data::Number(self.val)
+    }
+
+    fn clone_expr(&self) -> Box<Expression> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Clone)]
+pub struct StrLiteral {
+    pub val: String,
+}
+
+impl Expression for StrLiteral {
+    fn eval(&self, _: &mut Program) -> Data {
+        Data::Str(self.val.clone())
+    }
+
+    fn clone_expr(&self) -> Box<Expression> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Clone)]
 pub struct Variable {
     pub name: String,
 }
@@ -123,14 +181,13 @@ impl Expression for FunctionCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::Data::*;
 
     #[test]
     fn test_things() {
         let mut ast: Vec<Box<Expression>> = Vec::new();
         ast.push(Box::new(Assignment {
             left: Variable{name: "x".to_owned()},
-            right: Box::new(Number(2.0)),
+            right: Box::new(NumberLiteral{val: 2.0}),
         }));
         ast.push(Box::new(FunctionCall {
             name: "println".to_owned(),
