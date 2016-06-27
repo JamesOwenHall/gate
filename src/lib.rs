@@ -22,6 +22,7 @@ pub enum Expression {
     Assignment{left: String, right: Box<Expression>},
     FunctionCall{name: String, args: Vec<Expression>},
     BinaryExpr{left: Box<Expression>, op: BinaryOp, right: Box<Expression>},
+    IfExpr{cond: Box<Expression>, body: Box<Expression>, else_branch: Option<Box<Expression>>},
 }
 
 impl Expression {
@@ -58,6 +59,15 @@ impl Expression {
             &BinaryExpr{ref left, ref op, ref right} => {
                 let (left_data, right_data) = (left.eval(p), right.eval(p));
                 op.eval(&left_data, &right_data)
+            },
+            &IfExpr{ref cond, ref body, ref else_branch} => {
+                if cond.eval(p) == Boolean(true) {
+                    body.eval(p)
+                } else if let &Some(ref b) = else_branch {
+                    b.eval(p)
+                } else {
+                    Nil
+                }
             },
         }
     }
@@ -193,6 +203,28 @@ mod tests {
 
         for (op, left, right, exp) in cases {
             assert_eq!(op.eval(&left, &right), exp);
+        }
+    }
+
+    #[test]
+    fn test_if_expr() {
+        let mut p = Program::new();
+
+        let cases = vec![
+            (BooleanLiteral(true), NumberLiteral(1.0), None, Number(1.0)),
+            (BooleanLiteral(true), NumberLiteral(1.0), Some(NumberLiteral(2.0)), Number(1.0)),
+            (BooleanLiteral(false), NumberLiteral(1.0), None, Nil),
+            (BooleanLiteral(false), NumberLiteral(1.0), Some(NumberLiteral(2.0)), Number(2.0)),
+        ];
+
+        for (cond, body, else_branch, exp) in cases {
+            let x = IfExpr {
+                cond: Box::new(cond),
+                body: Box::new(body),
+                else_branch: else_branch.map(|e| Box::new(e)),
+            };
+
+            assert_eq!(x.eval(&mut p), exp);
         }
     }
 }
