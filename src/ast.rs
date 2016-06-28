@@ -23,6 +23,7 @@ pub enum Expression {
     FunctionCall{name: String, args: Vec<Expression>},
     BinaryExpr{left: Box<Expression>, op: BinaryOp, right: Box<Expression>},
     IfExpr{cond: Box<Expression>, body: Box<Expression>, else_branch: Option<Box<Expression>>},
+    WhileLoop{cond: Box<Expression>, body: Box<Expression>},
 }
 
 impl Expression {
@@ -61,13 +62,25 @@ impl Expression {
                 op.eval(&left_data, &right_data)
             },
             &IfExpr{ref cond, ref body, ref else_branch} => {
-                if cond.eval(p) == Boolean(true) {
+                if cond.eval(p) != Boolean(false) {
                     body.eval(p)
                 } else if let &Some(ref b) = else_branch {
                     b.eval(p)
                 } else {
                     Nil
                 }
+            },
+            &WhileLoop{ref cond, ref body} => {
+                let mut last_data = Nil;
+                loop {
+                    if let Boolean(false) = cond.eval(p) {
+                        break
+                    }
+
+                    last_data = body.eval(p);
+                }
+
+                last_data
             },
         }
     }
@@ -244,5 +257,30 @@ mod tests {
 
             assert_eq!(x.eval(&mut p), exp);
         }
+    }
+
+    #[test]
+    fn test_while_loop() {
+        let mut p = Program::new();
+        p.eval(&Assignment{left: "x".to_owned(), right: Box::new(NumberLiteral(0.0))});
+        
+        let out = p.eval(&WhileLoop {
+            cond: Box::new(BinaryExpr {
+                left: Box::new(Variable("x".to_owned())),
+                op: Lt,
+                right: Box::new(NumberLiteral(5.0)),
+            }),
+            body: Box::new(Assignment {
+                left: "x".to_owned(),
+                right: Box::new(BinaryExpr {
+                    left: Box::new(Variable("x".to_owned())),
+                    op: Add,
+                    right: Box::new(NumberLiteral(1.0)),
+                }),
+            }),
+        });
+
+        assert_eq!(out, Number(5.0));
+        assert_eq!(p.eval(&Variable("x".to_owned())), Number(5.0));
     }
 }
