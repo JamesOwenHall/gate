@@ -16,6 +16,9 @@ pub enum Token {
     Minus,
     Times,
     Divide,
+    Nil,
+    Boolean(bool),
+    Identifier(String),
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -34,8 +37,35 @@ impl<'a> Scanner<'a> {
         Scanner{input: input.chars().peekable()}
     }
 
+    fn read_word(&mut self) -> Token {
+        let mut word = String::new();
+        while let Some(&c) = self.input.peek() {
+            if !Self::is_digit(c) && !Self::is_alpha(c) {
+                break;
+            }
+
+            self.input.next();
+            word.push(c);
+        }
+
+        match word.as_ref() {
+            "nil" => Token::Nil,
+            "true" => Token::Boolean(true),
+            "false" => Token::Boolean(false),
+            _ => Token::Identifier(word),
+        }
+    }
+
     fn is_space(c: char) -> bool {
         c == ' ' || c == '\t' || c == '\n' || c == '\r'
+    }
+
+    fn is_alpha(c: char) -> bool {
+        c == '_' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+    }
+
+    fn is_digit(c: char) -> bool {
+        ('0' <= c && c <= '9')
     }
 }
 
@@ -104,6 +134,7 @@ impl<'a> Iterator for Scanner<'a> {
                 self.input.next();
                 Some(Ok(Token::Divide))
             },
+            Some(&c) if Self::is_alpha(c) => Some(Ok(self.read_word())),
             Some(&c) => {
                 self.input.next();
                 Some(Err(TokenError::UnexpectedChar(c)))
@@ -140,5 +171,18 @@ mod tests {
         let mut s = Scanner::new("($)");
         assert_eq!(s.next(), Some(Ok(OpenParen)));
         assert_eq!(s.next(), Some(Err(TokenError::UnexpectedChar('$'))));
+    }
+
+    #[test]
+    fn test_words() {
+        let mut s = Scanner::new("foo FOO _123_ Nil nil false true");
+        assert_eq!(s.next(), Some(Ok(Identifier("foo".to_owned()))));
+        assert_eq!(s.next(), Some(Ok(Identifier("FOO".to_owned()))));
+        assert_eq!(s.next(), Some(Ok(Identifier("_123_".to_owned()))));
+        assert_eq!(s.next(), Some(Ok(Identifier("Nil".to_owned()))));
+        assert_eq!(s.next(), Some(Ok(Nil)));
+        assert_eq!(s.next(), Some(Ok(Boolean(false))));
+        assert_eq!(s.next(), Some(Ok(Boolean(true))));
+        assert_eq!(s.next(), None);
     }
 }
