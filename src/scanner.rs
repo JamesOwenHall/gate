@@ -19,6 +19,7 @@ pub enum Token {
     Nil,
     Boolean(bool),
     Identifier(String),
+    Number(f64),
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -54,6 +55,34 @@ impl<'a> Scanner<'a> {
             "false" => Token::Boolean(false),
             _ => Token::Identifier(word),
         }
+    }
+
+    fn read_number(&mut self) -> f64 {
+        let mut num = String::new();
+        while let Some(&c) = self.input.peek() {
+            if !Self::is_digit(c) {
+                break;
+            }
+
+            self.input.next();
+            num.push(c);
+        }
+
+        if let Some(&'.') = self.input.peek() {
+            self.input.next();
+            num.push('.');
+
+            while let Some(&c) = self.input.peek() {
+                if !Self::is_digit(c) {
+                    break;
+                }
+
+                self.input.next();
+                num.push(c);
+            }
+        }
+
+        num.parse().unwrap()
     }
 
     fn is_space(c: char) -> bool {
@@ -120,11 +149,17 @@ impl<'a> Iterator for Scanner<'a> {
             },
             Some(&'+') => {
                 self.input.next();
-                Some(Ok(Token::Plus))
+                match self.input.peek() {
+                    Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number()))),
+                    _ => Some(Ok(Token::Plus)),
+                }
             },
             Some(&'-') => {
                 self.input.next();
-                Some(Ok(Token::Minus))
+                match self.input.peek() {
+                    Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number() * -1.0))),
+                    _ => Some(Ok(Token::Minus)),
+                }
             },
             Some(&'*') => {
                 self.input.next();
@@ -135,6 +170,7 @@ impl<'a> Iterator for Scanner<'a> {
                 Some(Ok(Token::Divide))
             },
             Some(&c) if Self::is_alpha(c) => Some(Ok(self.read_word())),
+            Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number()))),
             Some(&c) => {
                 self.input.next();
                 Some(Err(TokenError::UnexpectedChar(c)))
@@ -183,6 +219,18 @@ mod tests {
         assert_eq!(s.next(), Some(Ok(Nil)));
         assert_eq!(s.next(), Some(Ok(Boolean(false))));
         assert_eq!(s.next(), Some(Ok(Boolean(true))));
+        assert_eq!(s.next(), None);
+    }
+
+    #[test]
+    fn test_number() {
+        let mut s = Scanner::new("0 -0 -1.2 +2.3 999 1.");
+        assert_eq!(s.next(), Some(Ok(Number(0.0))));
+        assert_eq!(s.next(), Some(Ok(Number(0.0))));
+        assert_eq!(s.next(), Some(Ok(Number(-1.2))));
+        assert_eq!(s.next(), Some(Ok(Number(2.3))));
+        assert_eq!(s.next(), Some(Ok(Number(999.0))));
+        assert_eq!(s.next(), Some(Ok(Number(1.0))));
         assert_eq!(s.next(), None);
     }
 }
