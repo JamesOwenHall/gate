@@ -1,7 +1,8 @@
 use std::iter::{Iterator, Peekable};
+use std::result;
 use std::str::Chars;
 
-#[derive(Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum Token {
     OpenParen,
     CloseParen,
@@ -16,6 +17,13 @@ pub enum Token {
     Times,
     Divide,
 }
+
+#[derive(Clone,Debug,PartialEq)]
+pub enum TokenError {
+    UnexpectedChar(char),
+}
+
+pub type Result<T> = result::Result<T, TokenError>;
 
 pub struct Scanner<'a> {
     input: Peekable<Chars<'a>>,
@@ -32,7 +40,8 @@ impl<'a> Scanner<'a> {
 }
 
 impl<'a> Iterator for Scanner<'a> {
-    type Item = Token;
+    type Item = Result<Token>;
+
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(&c) = self.input.peek() {
             if Self::is_space(c) {
@@ -46,56 +55,59 @@ impl<'a> Iterator for Scanner<'a> {
             None => None,
             Some(&'(') => {
                 self.input.next();
-                Some(Token::OpenParen)
+                Some(Ok(Token::OpenParen))
             },
             Some(&')') => {
                 self.input.next();
-                Some(Token::CloseParen)
+                Some(Ok(Token::CloseParen))
             },
             Some(&'=') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
                     self.input.next();
-                    Some(Token::DoubleEq)
+                    Some(Ok(Token::DoubleEq))
                 } else {
-                    Some(Token::Eq)
+                    Some(Ok(Token::Eq))
                 }
             },
             Some(&'<') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
                     self.input.next();
-                    Some(Token::LtEq)
+                    Some(Ok(Token::LtEq))
                 } else {
-                    Some(Token::Lt)
+                    Some(Ok(Token::Lt))
                 }
             },
             Some(&'>') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
                     self.input.next();
-                    Some(Token::GtEq)
+                    Some(Ok(Token::GtEq))
                 } else {
-                    Some(Token::Gt)
+                    Some(Ok(Token::Gt))
                 }
             },
             Some(&'+') => {
                 self.input.next();
-                Some(Token::Plus)
+                Some(Ok(Token::Plus))
             },
             Some(&'-') => {
                 self.input.next();
-                Some(Token::Minus)
+                Some(Ok(Token::Minus))
             },
             Some(&'*') => {
                 self.input.next();
-                Some(Token::Times)
+                Some(Ok(Token::Times))
             },
             Some(&'/') => {
                 self.input.next();
-                Some(Token::Divide)
+                Some(Ok(Token::Divide))
             },
-            _ => None,
+            Some(&c) => {
+                self.input.next();
+                Some(Err(TokenError::UnexpectedChar(c)))
+            },
         }
     }
 }
@@ -108,18 +120,25 @@ mod tests {
     #[test]
     fn test_punctuation() {
         let mut s = Scanner::new("() = == < <= > >= +-*/");
-        assert_eq!(s.next(), Some(OpenParen));
-        assert_eq!(s.next(), Some(CloseParen));
-        assert_eq!(s.next(), Some(Eq));
-        assert_eq!(s.next(), Some(DoubleEq));
-        assert_eq!(s.next(), Some(Lt));
-        assert_eq!(s.next(), Some(LtEq));
-        assert_eq!(s.next(), Some(Gt));
-        assert_eq!(s.next(), Some(GtEq));
-        assert_eq!(s.next(), Some(Plus));
-        assert_eq!(s.next(), Some(Minus));
-        assert_eq!(s.next(), Some(Times));
-        assert_eq!(s.next(), Some(Divide));
+        assert_eq!(s.next(), Some(Ok(OpenParen)));
+        assert_eq!(s.next(), Some(Ok(CloseParen)));
+        assert_eq!(s.next(), Some(Ok(Eq)));
+        assert_eq!(s.next(), Some(Ok(DoubleEq)));
+        assert_eq!(s.next(), Some(Ok(Lt)));
+        assert_eq!(s.next(), Some(Ok(LtEq)));
+        assert_eq!(s.next(), Some(Ok(Gt)));
+        assert_eq!(s.next(), Some(Ok(GtEq)));
+        assert_eq!(s.next(), Some(Ok(Plus)));
+        assert_eq!(s.next(), Some(Ok(Minus)));
+        assert_eq!(s.next(), Some(Ok(Times)));
+        assert_eq!(s.next(), Some(Ok(Divide)));
         assert_eq!(s.next(), None);
+    }
+
+    #[test]
+    fn test_unexpected_char() {
+        let mut s = Scanner::new("($)");
+        assert_eq!(s.next(), Some(Ok(OpenParen)));
+        assert_eq!(s.next(), Some(Err(TokenError::UnexpectedChar('$'))));
     }
 }
