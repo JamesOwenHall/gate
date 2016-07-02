@@ -20,11 +20,14 @@ pub enum Token {
     Boolean(bool),
     Identifier(String),
     Number(f64),
+    String(String),
 }
 
 #[derive(Clone,Debug,PartialEq)]
 pub enum TokenError {
     UnexpectedChar(char),
+    IncompleteString,
+    InvalidEscape,
 }
 
 pub type Result<T> = result::Result<T, TokenError>;
@@ -83,6 +86,33 @@ impl<'a> Scanner<'a> {
         }
 
         num.parse().unwrap()
+    }
+
+    fn read_string(&mut self) -> Result<Token> {
+        // Skip the opening quote.
+        self.input.next();
+
+        let mut buf = String::new();
+        while let Some(&c) = self.input.peek() {
+            self.input.next();
+
+            match c {
+                '"' => return Ok(Token::String(buf)),
+                '\\' => {
+                    match self.input.peek() {
+                        Some(&c) if c == '"' || c == '\\' => {
+                            self.input.next();
+                            buf.push(c);
+                        },
+                        _ => return Err(TokenError::InvalidEscape),
+                    }
+                },
+                _ => buf.push(c),
+            }
+        }
+
+        buf.insert(0, '"');
+        Err(TokenError::IncompleteString)
     }
 
     fn is_space(c: char) -> bool {
@@ -169,6 +199,7 @@ impl<'a> Iterator for Scanner<'a> {
                 self.input.next();
                 Some(Ok(Token::Divide))
             },
+            Some(&'"') => Some(self.read_string()),
             Some(&c) if Self::is_alpha(c) => Some(Ok(self.read_word())),
             Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number()))),
             Some(&c) => {
@@ -231,6 +262,15 @@ mod tests {
         assert_eq!(s.next(), Some(Ok(Number(2.3))));
         assert_eq!(s.next(), Some(Ok(Number(999.0))));
         assert_eq!(s.next(), Some(Ok(Number(1.0))));
+        assert_eq!(s.next(), None);
+    }
+
+    #[test]
+    fn test_string() {
+        let mut s = Scanner::new(r#" "" "Foo bar" "\"\\" "#);
+        assert_eq!(s.next(), Some(Ok(String("".to_owned()))));
+        assert_eq!(s.next(), Some(Ok(String("Foo bar".to_owned()))));
+        assert_eq!(s.next(), Some(Ok(String(r#""\"#.to_owned()))));
         assert_eq!(s.next(), None);
     }
 }
