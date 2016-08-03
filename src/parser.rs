@@ -113,30 +113,46 @@ impl<'a> Iterator for Parser<'a> {
             Err(e) => return Some(Err(e)),
         };
 
-        // Check for a binary op.
-        let op = match self.scanner.peek() {
-            Some(&Ok(ref t)) => {
-                if let Some(op) = t.to_binary_op() {
-                    op
-                } else {
-                    return Some(Ok(lhs));
-                }
-            },
+        // Copy the next token because we might be part of a larger expression.
+        let next = match self.scanner.peek().cloned() {
+            Some(Ok(t)) => t,
             _ => return Some(Ok(lhs)),
         };
-        self.scanner.next();
 
-        let rhs = match self.next() {
-            Some(Ok(e)) => e,
-            Some(Err(e)) => return Some(Err(e)),
-            None => return Some(Err(ParseError::UnexpectedEOF)),
-        };
+        // Binary expression.
+        if let Some(op) = next.to_binary_op() {
+            self.scanner.next();
+            let rhs = match self.next() {
+                Some(Ok(e)) => e,
+                Some(Err(e)) => return Some(Err(e)),
+                None => return Some(Err(ParseError::UnexpectedEOF)),
+            };
 
-        Some(Ok(Expression::BinaryExpr{
-            left: Box::new(lhs),
-            op: op,
-            right: Box::new(rhs),
-        }))
+            return Some(Ok(Expression::BinaryExpr{
+                left: Box::new(lhs),
+                op: op,
+                right: Box::new(rhs),
+            }));
+        }
+
+        // Assignment.
+        if next == Token::Eq {
+            if let Expression::Variable(v) = lhs {
+                self.scanner.next();
+                let rhs = match self.next() {
+                    Some(Ok(e)) => e,
+                    Some(Err(e)) => return Some(Err(e)),
+                    None => return Some(Err(ParseError::UnexpectedEOF)),
+                };
+
+                return Some(Ok(Expression::Assignment{
+                    left: v,
+                    right: Box::new(rhs),
+                }));
+            }
+        }
+
+        Some(Ok(lhs))
     }
 }
 
@@ -234,5 +250,19 @@ mod tests {
             })));
             assert_eq!(parser.next(), None);
         }
+    }
+
+    #[test]
+    fn test_assignments() {
+        let mut parser = Parser::new("x = y = z");
+
+        assert_eq!(parser.next(), Some(Ok(Expression::Assignment{
+            left: "x".to_owned(),
+            right: Box::new(Expression::Assignment{
+                left: "y".to_owned(),
+                right: Box::new(Expression::Variable("z".to_owned())),
+            }),
+        })));
+        assert_eq!(parser.next(), None);
     }
 }
