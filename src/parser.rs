@@ -185,7 +185,7 @@ mod tests {
     use super::super::ast::*;
 
     #[test]
-    fn test_literals() {
+    fn test_literal() {
         let mut parser = Parser::new(r#"nil true false 1 "foo""#);
         assert_eq!(parser.next(), Some(Ok(Expression::NilLiteral)));
         assert_eq!(parser.next(), Some(Ok(Expression::BooleanLiteral(true))));
@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parentheses() {
+    fn test_parenthesis() {
         let mut parser = Parser::new(r#"(nil)(((true)))"#);
         assert_eq!(parser.next(), Some(Ok(Expression::NilLiteral)));
         assert_eq!(parser.next(), Some(Ok(Expression::BooleanLiteral(true))));
@@ -204,7 +204,7 @@ mod tests {
     }
 
     #[test]
-    fn test_identifiers_and_functions() {
+    fn test_identifier_and_function_call() {
         let foo_var = Expression::Variable("foo".to_owned());
 
         let mut parser = Parser::new(r#"foo foo() foo(foo) foo(foo, foo)"#);
@@ -249,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_ops() {
+    fn test_binary_op() {
         let cases = vec![
             ("+", BinaryOp::Add),
             ("-", BinaryOp::Sub),
@@ -276,7 +276,7 @@ mod tests {
     }
 
     #[test]
-    fn test_blocks() {
+    fn test_block() {
         let mut parser = Parser::new("{1{}2}");
 
         assert_eq!(parser.next(), Some(Ok(Expression::Block(vec![
@@ -288,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_assignments() {
+    fn test_assignment() {
         let mut parser = Parser::new("x = y = z");
 
         assert_eq!(parser.next(), Some(Ok(Expression::Assignment{
