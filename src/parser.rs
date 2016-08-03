@@ -39,6 +39,28 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // Assuming we've read an open curly, parse the inner block and the closing
+    // curly.
+    fn parse_block(&mut self) -> Result<Expression> {
+        let mut body = vec![];
+
+        loop {
+            match self.scanner.peek().cloned() {
+                None => return Err(ParseError::UnexpectedEOF),
+                Some(Err(e)) => return Err(ParseError::ScanError(e)),
+                Some(Ok(Token::CloseCurly)) => {
+                    self.scanner.next();
+                    return Ok(Expression::Block(body));
+                },
+                _ => match self.next() {
+                    Some(Ok(expr)) => body.push(expr),
+                    Some(Err(e)) => return Err(e),
+                    None => return Err(ParseError::UnexpectedEOF),
+                },
+            }
+        }
+    }
+
     // Assuming we've parsed an identifier, parse the rest of the expression.
     fn parse_identifier(&mut self, name: String) -> Result<Expression> {
         match self.scanner.peek() {
@@ -104,6 +126,7 @@ impl<'a> Iterator for Parser<'a> {
             Token::Number(n) => Ok(Expression::NumberLiteral(n)),
             Token::String(s) => Ok(Expression::StrLiteral(s)),
             Token::OpenParen => self.parse_bracketed_expr(),
+            Token::OpenCurly => self.parse_block(),
             Token::Identifier(s) => self.parse_identifier(s),
             t => Err(ParseError::Unexpected(t)),
         };
@@ -250,6 +273,18 @@ mod tests {
             })));
             assert_eq!(parser.next(), None);
         }
+    }
+
+    #[test]
+    fn test_blocks() {
+        let mut parser = Parser::new("{1{}2}");
+
+        assert_eq!(parser.next(), Some(Ok(Expression::Block(vec![
+            Expression::NumberLiteral(1.0),
+            Expression::Block(vec![]),
+            Expression::NumberLiteral(2.0),
+        ]))));
+        assert_eq!(parser.next(), None);
     }
 
     #[test]

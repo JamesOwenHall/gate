@@ -19,6 +19,7 @@ pub enum Expression {
     NumberLiteral(f64),
     StrLiteral(String),
     Variable(String),
+    Block(Vec<Expression>),
     Assignment{left: String, right: Box<Expression>},
     FunctionCall{name: String, args: Vec<Expression>},
     BinaryExpr{left: Box<Expression>, op: BinaryOp, right: Box<Expression>},
@@ -38,6 +39,13 @@ impl Expression {
                     Some(d) => d.clone(),
                     None => Nil,
                 }
+            },
+            &Block(ref exprs) => {
+                let mut last_result = Data::Nil;
+                for expr in exprs {
+                    last_result = expr.eval(p);
+                }
+                last_result
             },
             &Assignment{ref left, ref right} => {
                 let res = right.eval(p);
@@ -183,6 +191,18 @@ mod tests {
         assert_eq!(p.vars.get("x"), Some(&Number(2.0)));
         assert_eq!(p.vars.get("y"), Some(&Number(3.0)));
         assert_eq!(p.vars.get("z"), Some(&Nil));
+    }
+
+    #[test]
+    fn test_block() {
+        let block = Expression::Block(vec![
+            Expression::NumberLiteral(1.0),
+            Expression::NumberLiteral(2.0),
+            Expression::NumberLiteral(3.0),
+        ]);
+
+        let mut p = Program::new();
+        assert_eq!(block.eval(&mut p), Data::Number(3.0));
     }
 
     #[test]

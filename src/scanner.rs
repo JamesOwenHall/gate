@@ -8,6 +8,8 @@ use super::ast::BinaryOp;
 pub enum Token {
     OpenParen,
     CloseParen,
+    OpenCurly,
+    CloseCurly,
     Comma,
     Eq,
     DoubleEq,
@@ -169,6 +171,14 @@ impl<'a> Iterator for Scanner<'a> {
             Some(&')') => {
                 self.input.next();
                 Some(Ok(Token::CloseParen))
+            },
+            Some(&'{') => {
+                self.input.next();
+                Some(Ok(Token::OpenCurly))
+            },
+            Some(&'}') => {
+                self.input.next();
+                Some(Ok(Token::CloseCurly))
             },
             Some(&',') => {
                 self.input.next();
