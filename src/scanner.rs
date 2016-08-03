@@ -2,10 +2,13 @@ use std::iter::{Iterator, Peekable};
 use std::result;
 use std::str::Chars;
 
+use super::ast::BinaryOp;
+
 #[derive(Clone,Debug,PartialEq)]
 pub enum Token {
     OpenParen,
     CloseParen,
+    Comma,
     Eq,
     DoubleEq,
     Lt,
@@ -21,6 +24,23 @@ pub enum Token {
     Identifier(String),
     Number(f64),
     String(String),
+}
+
+impl Token {
+    pub fn to_binary_op(&self) -> Option<BinaryOp> {
+        match self {
+            &Token::DoubleEq => Some(BinaryOp::Eq),
+            &Token::Lt => Some(BinaryOp::Lt),
+            &Token::LtEq => Some(BinaryOp::LtEq),
+            &Token::Gt => Some(BinaryOp::Gt),
+            &Token::GtEq => Some(BinaryOp::GtEq),
+            &Token::Plus => Some(BinaryOp::Add),
+            &Token::Minus => Some(BinaryOp::Sub),
+            &Token::Times => Some(BinaryOp::Mul),
+            &Token::Divide => Some(BinaryOp::Div),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -150,6 +170,10 @@ impl<'a> Iterator for Scanner<'a> {
                 self.input.next();
                 Some(Ok(Token::CloseParen))
             },
+            Some(&',') => {
+                self.input.next();
+                Some(Ok(Token::Comma))
+            },
             Some(&'=') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
@@ -217,8 +241,9 @@ mod tests {
 
     #[test]
     fn test_punctuation() {
-        let mut s = Scanner::new("() = == < <= > >= +-*/");
+        let mut s = Scanner::new("(,) = == < <= > >= +-*/");
         assert_eq!(s.next(), Some(Ok(OpenParen)));
+        assert_eq!(s.next(), Some(Ok(Comma)));
         assert_eq!(s.next(), Some(Ok(CloseParen)));
         assert_eq!(s.next(), Some(Ok(Eq)));
         assert_eq!(s.next(), Some(Ok(DoubleEq)));

@@ -12,7 +12,7 @@ pub enum Data {
     Str(String),
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum Expression {
     NilLiteral,
     BooleanLiteral(bool),
@@ -86,7 +86,7 @@ impl Expression {
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum BinaryOp {
     Add,
     Sub,
