@@ -22,6 +22,8 @@ pub enum Token {
     Times,
     Divide,
     Nil,
+    If,
+    Else,
     Boolean(bool),
     Identifier(String),
     Number(f64),
@@ -75,6 +77,8 @@ impl<'a> Scanner<'a> {
         }
 
         match word.as_ref() {
+            "if" => Token::If,
+            "else" => Token::Else,
             "nil" => Token::Nil,
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
@@ -277,12 +281,13 @@ mod tests {
 
     #[test]
     fn test_words() {
-        let mut s = Scanner::new("foo FOO _123_ Nil nil false true");
+        let mut s = Scanner::new("foo FOO _123_ Nil nil if false true");
         assert_eq!(s.next(), Some(Ok(Identifier("foo".to_owned()))));
         assert_eq!(s.next(), Some(Ok(Identifier("FOO".to_owned()))));
         assert_eq!(s.next(), Some(Ok(Identifier("_123_".to_owned()))));
         assert_eq!(s.next(), Some(Ok(Identifier("Nil".to_owned()))));
         assert_eq!(s.next(), Some(Ok(Nil)));
+        assert_eq!(s.next(), Some(Ok(If)));
         assert_eq!(s.next(), Some(Ok(Boolean(false))));
         assert_eq!(s.next(), Some(Ok(Boolean(true))));
         assert_eq!(s.next(), None);

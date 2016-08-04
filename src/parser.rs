@@ -77,6 +77,40 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // Assuming we've read an "if", parse the condition, the body and the else
+    // branch, if present.
+    fn parse_if(&mut self) -> Result<Expression> {
+        let condition = match self.next() {
+            None => return Err(ParseError::UnexpectedEOF),
+            Some(Err(e)) => return Err(e),
+            Some(Ok(expr)) => expr,
+        };
+
+        let body = match self.next() {
+            None => return Err(ParseError::UnexpectedEOF),
+            Some(Err(e)) => return Err(e),
+            Some(Ok(expr)) => expr,
+        };
+
+        let else_branch = match self.scanner.peek() {
+            Some(&Ok(Token::Else)) => {
+                self.scanner.next();
+                match self.next() {
+                    None => return Err(ParseError::UnexpectedEOF),
+                    Some(Err(e)) => return Err(e),
+                    Some(Ok(expr)) => Some(Box::new(expr)),
+                }
+            },
+            _ => None,
+        };
+
+        Ok(Expression::IfExpr{
+            cond: Box::new(condition),
+            body: Box::new(body),
+            else_branch: else_branch,
+        })
+    }
+
     // parse_expr_list parses a comma-separated list of expressions until the
     // specified token is found.
     fn parse_expr_list(&mut self, until: &Token) -> Result<Vec<Expression>> {
@@ -128,6 +162,7 @@ impl<'a> Iterator for Parser<'a> {
             Token::OpenParen => self.parse_bracketed_expr(),
             Token::OpenCurly => self.parse_block(),
             Token::Identifier(s) => self.parse_identifier(s),
+            Token::If => self.parse_if(),
             t => Err(ParseError::Unexpected(t)),
         };
 
@@ -297,6 +332,22 @@ mod tests {
                 left: "y".to_owned(),
                 right: Box::new(Expression::Variable("z".to_owned())),
             }),
+        })));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn test_if_expr() {
+        let mut parser = Parser::new("if true {} else if false {}");
+
+        assert_eq!(parser.next(), Some(Ok(Expression::IfExpr{
+            cond: Box::new(Expression::BooleanLiteral(true)),
+            body: Box::new(Expression::Block(vec![])),
+            else_branch: Some(Box::new(Expression::IfExpr{
+                cond: Box::new(Expression::BooleanLiteral(false)),
+                body: Box::new(Expression::Block(vec![])),
+                else_branch: None,
+            })),
         })));
         assert_eq!(parser.next(), None);
     }
