@@ -111,6 +111,26 @@ impl<'a> Parser<'a> {
         })
     }
 
+    // Assuming we've read a "while", parse the condition and the body.
+    fn parse_while(&mut self) -> Result<Expression> {
+        let condition = match self.next() {
+            None => return Err(ParseError::UnexpectedEOF),
+            Some(Err(e)) => return Err(e),
+            Some(Ok(expr)) => expr,
+        };
+
+        let body = match self.next() {
+            None => return Err(ParseError::UnexpectedEOF),
+            Some(Err(e)) => return Err(e),
+            Some(Ok(expr)) => expr,
+        };
+
+        Ok(Expression::WhileLoop{
+            cond: Box::new(condition),
+            body: Box::new(body),
+        })
+    }
+
     // parse_expr_list parses a comma-separated list of expressions until the
     // specified token is found.
     fn parse_expr_list(&mut self, until: &Token) -> Result<Vec<Expression>> {
@@ -163,6 +183,7 @@ impl<'a> Iterator for Parser<'a> {
             Token::OpenCurly => self.parse_block(),
             Token::Identifier(s) => self.parse_identifier(s),
             Token::If => self.parse_if(),
+            Token::While => self.parse_while(),
             t => Err(ParseError::Unexpected(t)),
         };
 
@@ -348,6 +369,17 @@ mod tests {
                 body: Box::new(Expression::Block(vec![])),
                 else_branch: None,
             })),
+        })));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn test_while_loop() {
+        let mut parser = Parser::new("while true {}");
+
+        assert_eq!(parser.next(), Some(Ok(Expression::WhileLoop{
+            cond: Box::new(Expression::BooleanLiteral(true)),
+            body: Box::new(Expression::Block(vec![])),
         })));
         assert_eq!(parser.next(), None);
     }
