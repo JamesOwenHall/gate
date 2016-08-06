@@ -3,11 +3,9 @@ name = "gate"
 version = "0.1.0"
 authors = ["James Hall <james_hall@live.ca>"]
 
-[lib]
-name = "gate"
-
 [[bin]]
 name = "gate"
 path = "src/bin/main.rs"
 
 [dependencies]
+clap = "2.10"

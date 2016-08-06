@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use BinaryOp::*;
 use Data::*;
@@ -10,6 +11,17 @@ pub enum Data {
     Boolean(bool),
     Number(f64),
     Str(String),
+}
+
+impl fmt::Display for Data {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Nil => write!(f, "nil"),
+            &Boolean(b) => write!(f, "{}", b),
+            &Number(n) => write!(f, "{}", n),
+            &Str(ref s) => write!(f, "{}", s),
+        }
+    }
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -144,7 +156,7 @@ impl Program {
 
 pub fn println(v: &Vec<Data>) -> Data {
     for item in v {
-        print!("{:?}", item);
+        print!("{}", item);
     }
     println!("");
     Data::Nil

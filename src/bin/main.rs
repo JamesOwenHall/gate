@@ -1,13 +1,23 @@
+extern crate clap;
 extern crate gate;
 
-use gate::{Parser, Program};
+use std::io;
+use std::io::Read;
 
 fn main() {
-    let mut parser = Parser::new("false");
-    let expr = parser.next().unwrap().unwrap();
+    clap::App::new("gate")
+        .version("0.1.0")
+        .author("James Hall")
+        .about("A simple programming language.")
+        .get_matches();
 
-    let mut p = Program::new();
-    let res = expr.eval(&mut p);
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input).unwrap();
 
-    println!("{:?}", res);
+    let parser = gate::Parser::new(&input);
+    let mut program = gate::Program::new();
+    
+    for expr in parser {
+        expr.unwrap().eval(&mut program);
+    }
 }
