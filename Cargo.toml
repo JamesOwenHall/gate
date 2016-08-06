@@ -9,3 +9,4 @@ path = "src/bin/main.rs"
 
 [dependencies]
 clap = "2.10"
+rustyline = "0.2"
