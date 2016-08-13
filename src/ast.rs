@@ -112,6 +112,7 @@ pub enum BinaryOp {
     Sub,
     Mul,
     Div,
+    Mod,
     Eq,
     Lt,
     LtEq,
@@ -126,6 +127,7 @@ impl BinaryOp {
             (&Sub, &Number(l), &Number(r)) => Number(l-r),
             (&Mul, &Number(l), &Number(r)) => Number(l*r),
             (&Div, &Number(l), &Number(r)) => Number(l/r),
+            (&Mod, &Number(l), &Number(r)) => Number(l%r),
             (&Eq, _, _) => Boolean(left == right),
             (&Lt, &Number(l), &Number(r)) => Boolean(l < r),
             (&LtEq, &Number(l), &Number(r)) => Boolean(l <= r),
@@ -236,6 +238,10 @@ mod tests {
             (Div, Number(1.0), Number(2.0), Number(0.5)),
             (Div, Boolean(false), Number(2.0), Nil),
             (Div, Number(2.0), Str("1.0".to_owned()), Nil),
+            // Mod
+            (Mod, Number(17.0), Number(4.0), Number(1.0)),
+            (Mod, Boolean(false), Number(2.0), Nil),
+            (Mod, Number(2.0), Str("1.0".to_owned()), Nil),
             // Eq
             (Eq, Number(2.0), Number(2.0), Boolean(true)),
             (Eq, Number(-2.0), Number(2.0), Boolean(false)),

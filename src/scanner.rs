@@ -21,6 +21,7 @@ pub enum Token {
     Minus,
     Times,
     Divide,
+    Percent,
     Nil,
     If,
     Else,
@@ -43,6 +44,7 @@ impl Token {
             &Token::Minus => Some(BinaryOp::Sub),
             &Token::Times => Some(BinaryOp::Mul),
             &Token::Divide => Some(BinaryOp::Div),
+            &Token::Percent => Some(BinaryOp::Mod),
             _ => None,
         }
     }
@@ -239,6 +241,10 @@ impl<'a> Iterator for Scanner<'a> {
                 self.input.next();
                 Some(Ok(Token::Divide))
             },
+            Some(&'%') => {
+                self.input.next();
+                Some(Ok(Token::Percent))
+            },
             Some(&'"') => Some(self.read_string()),
             Some(&c) if Self::is_alpha(c) => Some(Ok(self.read_word())),
             Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number()))),
@@ -257,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_punctuation() {
-        let mut s = Scanner::new("(,) = == < <= > >= +-*/");
+        let mut s = Scanner::new("(,) = == < <= > >= +-*/%");
         assert_eq!(s.next(), Some(Ok(OpenParen)));
         assert_eq!(s.next(), Some(Ok(Comma)));
         assert_eq!(s.next(), Some(Ok(CloseParen)));
@@ -271,6 +277,7 @@ mod tests {
         assert_eq!(s.next(), Some(Ok(Minus)));
         assert_eq!(s.next(), Some(Ok(Times)));
         assert_eq!(s.next(), Some(Ok(Divide)));
+        assert_eq!(s.next(), Some(Ok(Percent)));
         assert_eq!(s.next(), None);
     }
 
