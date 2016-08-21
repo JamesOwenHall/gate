@@ -24,7 +24,7 @@ impl<'a> Parser<'a> {
 
     // Assuming we've read an open paren, parse the inner expression and the
     // closing paren.
-    fn parse_bracketed_expr(&mut self) -> Result<Expression> {
+    fn parse_paren_expr(&mut self) -> Result<Expression> {
         let inner = match self.next() {
             Some(Ok(expr)) => expr,
             Some(Err(e)) => return Err(e),
@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
         };
 
         match self.scanner.next() {
-            Some(Ok(Token::CloseParen)) => Ok(inner),
+            Some(Ok(Token::CloseParen)) => Ok(Expression::ParenExpr(Box::new(inner))),
             Some(Ok(t)) => Err(ParseError::Unexpected(t)),
             Some(Err(e)) => Err(ParseError::ScanError(e)),
             None => Err(ParseError::UnexpectedEOF),
@@ -179,7 +179,7 @@ impl<'a> Iterator for Parser<'a> {
             Token::Boolean(b) => Ok(Expression::BooleanLiteral(b)),
             Token::Number(n) => Ok(Expression::NumberLiteral(n)),
             Token::String(s) => Ok(Expression::StrLiteral(s)),
-            Token::OpenParen => self.parse_bracketed_expr(),
+            Token::OpenParen => self.parse_paren_expr(),
             Token::OpenCurly => self.parse_block(),
             Token::Identifier(s) => self.parse_identifier(s),
             Token::If => self.parse_if(),
@@ -254,8 +254,16 @@ mod tests {
     #[test]
     fn test_parenthesis() {
         let mut parser = Parser::new(r#"(nil)(((true)))"#);
-        assert_eq!(parser.next(), Some(Ok(Expression::NilLiteral)));
-        assert_eq!(parser.next(), Some(Ok(Expression::BooleanLiteral(true))));
+        assert_eq!(parser.next(), Some(Ok(Expression::ParenExpr(
+            Box::new(Expression::NilLiteral),
+        ))));
+        assert_eq!(parser.next(), Some(Ok(Expression::ParenExpr(
+            Box::new(Expression::ParenExpr(
+                Box::new(Expression::ParenExpr(
+                    Box::new(Expression::BooleanLiteral(true)),
+                )),
+            )),
+        ))));
         assert_eq!(parser.next(), None);
     }
 

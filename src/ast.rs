@@ -31,6 +31,7 @@ pub enum Expression {
     NumberLiteral(f64),
     StrLiteral(String),
     Variable(String),
+    ParenExpr(Box<Expression>),
     Block(Vec<Expression>),
     Assignment{left: String, right: Box<Expression>},
     FunctionCall{name: String, args: Vec<Expression>},
@@ -52,6 +53,7 @@ impl Expression {
                     None => Nil,
                 }
             },
+            &ParenExpr(ref expr) => expr.eval(p),
             &Block(ref exprs) => {
                 let mut last_result = Data::Nil;
                 for expr in exprs {
@@ -205,6 +207,16 @@ mod tests {
         assert_eq!(p.vars.get("x"), Some(&Number(2.0)));
         assert_eq!(p.vars.get("y"), Some(&Number(3.0)));
         assert_eq!(p.vars.get("z"), Some(&Nil));
+    }
+
+    #[test]
+    fn test_paren_expr() {
+        let expr = Expression::ParenExpr(
+            Box::new(Expression::BooleanLiteral(true)),
+        );
+
+        let mut p = Program::new();
+        assert_eq!(expr.eval(&mut p), Data::Boolean(true));
     }
 
     #[test]
