@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::result;
 
-use super::ast::Expression;
+use super::ast::{BinaryOp, Expression};
 use super::scanner::{Scanner, Token, TokenError};
 
 pub type Result<T> = result::Result<T, ParseError>;
@@ -162,6 +162,32 @@ impl<'a> Parser<'a> {
             }
         }
     }
+
+    fn apply_precedence(&mut self, lhs: Box<Expression>,
+    op: BinaryOp, rhs: Box<Expression>) -> Expression {
+        match *rhs {
+            Expression::BinaryExpr{left: ref lhs_r, op: ref op_r, right: ref rhs_r} => {
+                if op_r.precendence() < op.precendence() {
+                    return Expression::BinaryExpr{
+                        left: Box::new(Expression::BinaryExpr{
+                            left: lhs.clone(),
+                            op: op,
+                            right: lhs_r.clone(),
+                        }),
+                        op: op_r.clone(),
+                        right: rhs_r.clone(),
+                    };
+                }
+            },
+            _ => {},
+        }
+
+        Expression::BinaryExpr{
+            left: lhs,
+            op: op,
+            right: rhs,
+        }
+    }
 }
 
 impl<'a> Iterator for Parser<'a> {
@@ -207,11 +233,7 @@ impl<'a> Iterator for Parser<'a> {
                 None => return Some(Err(ParseError::UnexpectedEOF)),
             };
 
-            return Some(Ok(Expression::BinaryExpr{
-                left: Box::new(lhs),
-                op: op,
-                right: Box::new(rhs),
-            }));
+            return Some(Ok(self.apply_precedence(Box::new(lhs), op, Box::new(rhs))));
         }
 
         // Assignment.
@@ -388,6 +410,31 @@ mod tests {
         assert_eq!(parser.next(), Some(Ok(Expression::WhileLoop{
             cond: Box::new(Expression::BooleanLiteral(true)),
             body: Box::new(Expression::Block(vec![])),
+        })));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn test_precedence() {
+        let mut parser = Parser::new("1 + 2 * 3  1 * 2 + 3");
+
+        assert_eq!(parser.next(), Some(Ok(Expression::BinaryExpr{
+            left: Box::new(Expression::NumberLiteral(1.0)),
+            op: BinaryOp::Add,
+            right: Box::new(Expression::BinaryExpr{
+                left: Box::new(Expression::NumberLiteral(2.0)),
+                op: BinaryOp::Mul,
+                right: Box::new(Expression::NumberLiteral(3.0)),
+            }),
+        })));
+        assert_eq!(parser.next(), Some(Ok(Expression::BinaryExpr{
+            left: Box::new(Expression::BinaryExpr{
+                left: Box::new(Expression::NumberLiteral(1.0)),
+                op: BinaryOp::Mul,
+                right: Box::new(Expression::NumberLiteral(2.0)),
+            }),
+            op: BinaryOp::Add,
+            right: Box::new(Expression::NumberLiteral(3.0)),
         })));
         assert_eq!(parser.next(), None);
     }

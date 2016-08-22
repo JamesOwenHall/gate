@@ -138,6 +138,21 @@ impl BinaryOp {
             _ => Nil,
         }
     }
+
+    pub fn precendence(&self) -> u8 {
+        match self {
+            &Add => 3,
+            &Sub => 3,
+            &Mul => 4,
+            &Div => 4,
+            &Mod => 2,
+            &Eq => 0,
+            &Lt => 1,
+            &LtEq => 1,
+            &Gt => 1,
+            &GtEq => 1,
+        }
+    }
 }
 
 pub struct Program {
