@@ -57,6 +57,10 @@ fn run_interactive(program: &mut gate::Program) {
                             needs_more_input = true;
                             break;
                         },
+                        Err(gate::ParseError::ScanError(gate::TokenError::IncompleteString)) => {
+                            needs_more_input = true;
+                            break;
+                        },
                         Err(e) => {
                             println!("{:?}", e);
                             continue 'outer;
@@ -75,6 +79,7 @@ fn run_interactive(program: &mut gate::Program) {
                 println!("{:?}", last_result);
                 continue 'outer;
             } else {
+                line.push('\n');
                 match rl.readline(">> ") {
                     Ok(l) => line.push_str(&l),
                     Err(_) => break 'outer,
