@@ -157,14 +157,12 @@ impl BinaryOp {
 
 pub struct Program {
     pub vars: HashMap<String, Data>,
-    pub funcs: HashMap<String, i64>,
 }
 
 impl Program {
     pub fn new() -> Self {
         Program {
             vars: HashMap::new(),
-            funcs: HashMap::new(),
         }
     }
 
