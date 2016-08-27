@@ -260,7 +260,7 @@ impl<'a> Iterator for Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::ast::*;
+    use super::super::ast::{BinaryOp, Expression};
 
     #[test]
     fn test_literal() {

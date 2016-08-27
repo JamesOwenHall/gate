@@ -8,8 +8,7 @@ use std::io::Read;
 fn main() {
     let matches = clap::App::new("gate")
         .version("0.1.0")
-        .author("James Hall")
-        .about("A simple programming language.")
+        .about("A simple programming language")
         .arg(clap::Arg::with_name("interactive")
             .short("i")
             .long("interactive"))
@@ -74,7 +73,13 @@ fn run_interactive(program: &mut gate::Program) {
 
                 let mut last_result = gate::Data::Nil;
                 for expr in exprs {
-                    last_result = expr.eval(program);
+                    last_result = match expr.eval(program) {
+                        Ok(d) => d,
+                        Err(e) => {
+                            println!("error: {}", e);
+                            continue 'outer;
+                        },
+                    };
                 }
                 println!("{:?}", last_result);
                 continue 'outer;
@@ -92,7 +97,13 @@ fn run_interactive(program: &mut gate::Program) {
 fn run(program: &mut gate::Program, input: String) {
     let parser = gate::Parser::new(&input);
     for expr in parser {
-        expr.unwrap().eval(program);
+        match expr.unwrap().eval(program) {
+            Ok(_) => {},
+            Err(e) => {
+                println!("error: {}", e);
+                break;
+            },
+        }
     }
 }
 
