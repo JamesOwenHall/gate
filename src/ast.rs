@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use std::{fmt, result};
 
 use BinaryOp::*;
 use Data::*;
 use ExecuteError::*;
 use Expression::*;
+use super::program::Program;
 
 #[derive(Clone,Debug,PartialEq)]
 pub enum Data {
@@ -66,7 +66,7 @@ impl Expression {
             &NumberLiteral(n) => Ok(Number(n)),
             &StrLiteral(ref s) => Ok(Str(s.clone())),
             &Variable(ref name) => {
-                match p.vars.get(name) {
+                match p.var(name) {
                     Some(d) => Ok(d.clone()),
                     None => Err(UndefinedVar(name.clone())),
                 }
@@ -74,14 +74,18 @@ impl Expression {
             &ParenExpr(ref expr) => expr.eval(p),
             &Block(ref exprs) => {
                 let mut last_result = Ok(Data::Nil);
+
+                p.new_scope();
                 for expr in exprs {
                     last_result = expr.eval(p);
                 }
+                p.pop_scope();
+
                 last_result
             },
             &Assignment{ref left, ref right} => {
                 let res = try!(right.eval(p));
-                p.vars.insert(left.clone(), res.clone());
+                p.set_var(left, res.clone());
                 Ok(res)
             },
             &FunctionCall{ref name, ref args} => {
@@ -174,22 +178,6 @@ impl BinaryOp {
     }
 }
 
-pub struct Program {
-    pub vars: HashMap<String, Data>,
-}
-
-impl Program {
-    pub fn new() -> Self {
-        Program {
-            vars: HashMap::new(),
-        }
-    }
-
-    pub fn eval(&mut self, e: &Expression) -> Result {
-        e.eval(self)
-    }
-}
-
 pub fn println(v: &Vec<Data>) -> Result {
     for item in v {
         print!("{}", item);
@@ -205,6 +193,7 @@ mod tests {
     use super::Data::*;
     use super::ExecuteError::*;
     use super::Expression::*;
+    use super::super::program::*;
 
     #[test]
     fn test_variables() {
@@ -236,10 +225,10 @@ mod tests {
             p.eval(&exp).ok();
         }
 
-        assert_eq!(p.vars.get("w"), None);
-        assert_eq!(p.vars.get("x"), Some(&Number(2.0)));
-        assert_eq!(p.vars.get("y"), Some(&Number(3.0)));
-        assert_eq!(p.vars.get("z"), None);
+        assert_eq!(p.var("w"), None);
+        assert_eq!(p.var("x"), Some(Number(2.0)));
+        assert_eq!(p.var("y"), Some(Number(3.0)));
+        assert_eq!(p.var("z"), None);
     }
 
     #[test]
@@ -278,6 +267,31 @@ mod tests {
 
         let mut p = Program::new();
         assert_eq!(block.eval(&mut p).unwrap(), Data::Number(3.0));
+    }
+
+    #[test]
+    fn test_block_scope() {
+        let var = Expression::Variable("x".to_owned());
+
+        let block = Expression::Block(vec![
+            Expression::Assignment{
+                left: "x".to_owned(),
+                right: Box::new(Expression::NumberLiteral(1.0)),
+            },
+            Expression::Variable("x".to_owned()),
+        ]);
+
+        let assign = Expression::Assignment{
+            left: "x".to_owned(),
+            right: Box::new(Expression::BooleanLiteral(true)),
+        };
+
+        let mut p = Program::new();
+        assert_eq!(Err(UndefinedVar("x".to_owned())), var.eval(&mut p));
+        assert_eq!(Ok(Number(1.0)), block.eval(&mut p));
+        assert_eq!(Err(UndefinedVar("x".to_owned())), var.eval(&mut p));
+        assert_eq!(Ok(Boolean(true)), assign.eval(&mut p));
+        assert_eq!(Ok(Boolean(true)), var.eval(&mut p));
     }
 
     #[test]
