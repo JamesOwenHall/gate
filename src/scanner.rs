@@ -2,7 +2,8 @@ use std::iter::{Iterator, Peekable};
 use std::result;
 use std::str::Chars;
 
-use super::ast::BinaryOp;
+use binary_op::BinaryOp;
+use error::TokenError;
 
 #[derive(Clone,Debug,PartialEq)]
 pub enum Token {
@@ -50,13 +51,6 @@ impl Token {
     }
 }
 
-#[derive(Clone,Debug,PartialEq)]
-pub enum TokenError {
-    UnexpectedChar(char),
-    IncompleteString,
-    InvalidEscape,
-}
-
 pub type Result<T> = result::Result<T, TokenError>;
 
 pub struct Scanner<'a> {
@@ -65,7 +59,7 @@ pub struct Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     pub fn new(input: &'a str) -> Self {
-        Scanner{input: input.chars().peekable()}
+        Scanner { input: input.chars().peekable() }
     }
 
     fn read_word(&mut self) -> Token {
@@ -133,10 +127,10 @@ impl<'a> Scanner<'a> {
                         Some(&c) if c == '"' || c == '\\' => {
                             self.input.next();
                             buf.push(c);
-                        },
+                        }
                         _ => return Err(TokenError::InvalidEscape),
                     }
-                },
+                }
                 _ => buf.push(c),
             }
         }
@@ -175,23 +169,23 @@ impl<'a> Iterator for Scanner<'a> {
             Some(&'(') => {
                 self.input.next();
                 Some(Ok(Token::OpenParen))
-            },
+            }
             Some(&')') => {
                 self.input.next();
                 Some(Ok(Token::CloseParen))
-            },
+            }
             Some(&'{') => {
                 self.input.next();
                 Some(Ok(Token::OpenCurly))
-            },
+            }
             Some(&'}') => {
                 self.input.next();
                 Some(Ok(Token::CloseCurly))
-            },
+            }
             Some(&',') => {
                 self.input.next();
                 Some(Ok(Token::Comma))
-            },
+            }
             Some(&'=') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
@@ -200,7 +194,7 @@ impl<'a> Iterator for Scanner<'a> {
                 } else {
                     Some(Ok(Token::Eq))
                 }
-            },
+            }
             Some(&'<') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
@@ -209,7 +203,7 @@ impl<'a> Iterator for Scanner<'a> {
                 } else {
                     Some(Ok(Token::Lt))
                 }
-            },
+            }
             Some(&'>') => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
@@ -218,46 +212,50 @@ impl<'a> Iterator for Scanner<'a> {
                 } else {
                     Some(Ok(Token::Gt))
                 }
-            },
+            }
             Some(&'+') => {
                 self.input.next();
                 match self.input.peek() {
                     Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number()))),
                     _ => Some(Ok(Token::Plus)),
                 }
-            },
+            }
             Some(&'-') => {
                 self.input.next();
                 match self.input.peek() {
-                    Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number() * -1.0))),
+                    Some(&c) if Self::is_digit(c) => {
+                        Some(Ok(Token::Number(self.read_number() * -1.0)))
+                    }
                     _ => Some(Ok(Token::Minus)),
                 }
-            },
+            }
             Some(&'*') => {
                 self.input.next();
                 Some(Ok(Token::Times))
-            },
+            }
             Some(&'/') => {
                 self.input.next();
                 Some(Ok(Token::Divide))
-            },
+            }
             Some(&'%') => {
                 self.input.next();
                 Some(Ok(Token::Percent))
-            },
+            }
             Some(&'"') => Some(self.read_string()),
             Some(&c) if Self::is_alpha(c) => Some(Ok(self.read_word())),
             Some(&c) if Self::is_digit(c) => Some(Ok(Token::Number(self.read_number()))),
             Some(&c) => {
                 self.input.next();
                 Some(Err(TokenError::UnexpectedChar(c)))
-            },
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use error::TokenError;
+
     use super::*;
     use super::Token::*;
 

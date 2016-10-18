@@ -1,17 +1,12 @@
 use std::iter::Peekable;
 use std::result;
 
-use super::ast::{BinaryOp, Expression};
-use super::scanner::{Scanner, Token, TokenError};
+use ast::Expression;
+use binary_op::BinaryOp;
+use error::ParseError;
+use scanner::{Scanner, Token};
 
 pub type Result<T> = result::Result<T, ParseError>;
-
-#[derive(Debug,PartialEq)]
-pub enum ParseError {
-    ScanError(TokenError),
-    Unexpected(Token),
-    UnexpectedEOF,
-}
 
 pub struct Parser<'a> {
     scanner: Peekable<Scanner<'a>>,
@@ -19,7 +14,7 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
-        Parser{scanner: Scanner::new(input).peekable()}
+        Parser { scanner: Scanner::new(input).peekable() }
     }
 
     // Assuming we've read an open paren, parse the inner expression and the
@@ -51,12 +46,14 @@ impl<'a> Parser<'a> {
                 Some(Ok(Token::CloseCurly)) => {
                     self.scanner.next();
                     return Ok(Expression::Block(body));
-                },
-                _ => match self.next() {
-                    Some(Ok(expr)) => body.push(expr),
-                    Some(Err(e)) => return Err(e),
-                    None => return Err(ParseError::UnexpectedEOF),
-                },
+                }
+                _ => {
+                    match self.next() {
+                        Some(Ok(expr)) => body.push(expr),
+                        Some(Err(e)) => return Err(e),
+                        None => return Err(ParseError::UnexpectedEOF),
+                    }
+                }
             }
         }
     }
@@ -69,10 +66,12 @@ impl<'a> Parser<'a> {
         };
 
         match self.parse_expr_list(&Token::CloseParen) {
-            Ok(args) => Ok(Expression::FunctionCall {
-                name: name,
-                args: args,
-            }),
+            Ok(args) => {
+                Ok(Expression::FunctionCall {
+                    name: name,
+                    args: args,
+                })
+            }
             Err(e) => Err(e),
         }
     }
@@ -100,11 +99,11 @@ impl<'a> Parser<'a> {
                     Some(Err(e)) => return Err(e),
                     Some(Ok(expr)) => Some(Box::new(expr)),
                 }
-            },
+            }
             _ => None,
         };
 
-        Ok(Expression::IfExpr{
+        Ok(Expression::IfExpr {
             cond: Box::new(condition),
             body: Box::new(body),
             else_branch: else_branch,
@@ -125,7 +124,7 @@ impl<'a> Parser<'a> {
             Some(Ok(expr)) => expr,
         };
 
-        Ok(Expression::WhileLoop{
+        Ok(Expression::WhileLoop {
             cond: Box::new(condition),
             body: Box::new(body),
         })
@@ -163,13 +162,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn apply_precedence(&mut self, lhs: Box<Expression>,
-    op: BinaryOp, rhs: Box<Expression>) -> Expression {
+    fn apply_precedence(&mut self,
+                        lhs: Box<Expression>,
+                        op: BinaryOp,
+                        rhs: Box<Expression>)
+                        -> Expression {
         match *rhs {
-            Expression::BinaryExpr{left: ref lhs_r, op: ref op_r, right: ref rhs_r} => {
+            Expression::BinaryExpr { left: ref lhs_r, op: ref op_r, right: ref rhs_r } => {
                 if op_r.precendence() < op.precendence() {
-                    return Expression::BinaryExpr{
-                        left: Box::new(Expression::BinaryExpr{
+                    return Expression::BinaryExpr {
+                        left: Box::new(Expression::BinaryExpr {
                             left: lhs.clone(),
                             op: op,
                             right: lhs_r.clone(),
@@ -178,11 +180,11 @@ impl<'a> Parser<'a> {
                         right: rhs_r.clone(),
                     };
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
-        Expression::BinaryExpr{
+        Expression::BinaryExpr {
             left: lhs,
             op: op,
             right: rhs,
@@ -246,7 +248,7 @@ impl<'a> Iterator for Parser<'a> {
                     None => return Some(Err(ParseError::UnexpectedEOF)),
                 };
 
-                return Some(Ok(Expression::Assignment{
+                return Some(Ok(Expression::Assignment {
                     left: v,
                     right: Box::new(rhs),
                 }));
@@ -259,8 +261,10 @@ impl<'a> Iterator for Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use ast::Expression;
+    use binary_op::BinaryOp;
+
     use super::*;
-    use super::super::ast::{BinaryOp, Expression};
 
     #[test]
     fn test_literal() {
@@ -269,16 +273,16 @@ mod tests {
         assert_eq!(parser.next(), Some(Ok(Expression::BooleanLiteral(true))));
         assert_eq!(parser.next(), Some(Ok(Expression::BooleanLiteral(false))));
         assert_eq!(parser.next(), Some(Ok(Expression::NumberLiteral(1.0))));
-        assert_eq!(parser.next(), Some(Ok(Expression::StrLiteral("foo".to_owned()))));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::StrLiteral("foo".to_owned()))));
         assert_eq!(parser.next(), None);
     }
 
     #[test]
     fn test_parenthesis() {
         let mut parser = Parser::new(r#"(nil)(((true)))"#);
-        assert_eq!(parser.next(), Some(Ok(Expression::ParenExpr(
-            Box::new(Expression::NilLiteral),
-        ))));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::ParenExpr(Box::new(Expression::NilLiteral)))));
         assert_eq!(parser.next(), Some(Ok(Expression::ParenExpr(
             Box::new(Expression::ParenExpr(
                 Box::new(Expression::ParenExpr(
@@ -295,18 +299,21 @@ mod tests {
 
         let mut parser = Parser::new(r#"foo foo() foo(foo) foo(foo, foo)"#);
         assert_eq!(parser.next(), Some(Ok(foo_var.clone())));
-        assert_eq!(parser.next(), Some(Ok(Expression::FunctionCall{
-            name: "foo".to_owned(),
-            args: vec![],
-        })));
-        assert_eq!(parser.next(), Some(Ok(Expression::FunctionCall{
-            name: "foo".to_owned(),
-            args: vec![foo_var.clone()],
-        })));
-        assert_eq!(parser.next(), Some(Ok(Expression::FunctionCall{
-            name: "foo".to_owned(),
-            args: vec![foo_var.clone(), foo_var.clone()],
-        })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::FunctionCall {
+                       name: "foo".to_owned(),
+                       args: vec![],
+                   })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::FunctionCall {
+                       name: "foo".to_owned(),
+                       args: vec![foo_var.clone()],
+                   })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::FunctionCall {
+                       name: "foo".to_owned(),
+                       args: vec![foo_var.clone(), foo_var.clone()],
+                   })));
         assert_eq!(parser.next(), None);
     }
 
@@ -314,23 +321,24 @@ mod tests {
     fn test_binary_expr() {
         let mut parser = Parser::new(r#"1 + 2 - 3 * 4 / 5"#);
 
-        assert_eq!(parser.next(), Some(Ok(Expression::BinaryExpr{
-            left: Box::new(Expression::NumberLiteral(1.0)),
-            op: BinaryOp::Add,
-            right: Box::new(Expression::BinaryExpr{
-                left: Box::new(Expression::NumberLiteral(2.0)),
-                op: BinaryOp::Sub,
-                right: Box::new(Expression::BinaryExpr{
-                    left: Box::new(Expression::NumberLiteral(3.0)),
-                    op: BinaryOp::Mul,
-                    right: Box::new(Expression::BinaryExpr{
-                        left: Box::new(Expression::NumberLiteral(4.0)),
-                        op: BinaryOp::Div,
-                        right: Box::new(Expression::NumberLiteral(5.0)),
-                    }),
-                }),
-            }),
-        })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::BinaryExpr {
+                       left: Box::new(Expression::NumberLiteral(1.0)),
+                       op: BinaryOp::Add,
+                       right: Box::new(Expression::BinaryExpr {
+                           left: Box::new(Expression::NumberLiteral(2.0)),
+                           op: BinaryOp::Sub,
+                           right: Box::new(Expression::BinaryExpr {
+                               left: Box::new(Expression::NumberLiteral(3.0)),
+                               op: BinaryOp::Mul,
+                               right: Box::new(Expression::BinaryExpr {
+                                   left: Box::new(Expression::NumberLiteral(4.0)),
+                                   op: BinaryOp::Div,
+                                   right: Box::new(Expression::NumberLiteral(5.0)),
+                               }),
+                           }),
+                       }),
+                   })));
         assert_eq!(parser.next(), None);
     }
 
@@ -352,11 +360,12 @@ mod tests {
             let expr_str = format!("1 {} 2", s);
 
             let mut parser = Parser::new(&expr_str);
-            assert_eq!(parser.next(), Some(Ok(Expression::BinaryExpr{
-                left: Box::new(Expression::NumberLiteral(1.0)),
-                op: op,
-                right: Box::new(Expression::NumberLiteral(2.0)),
-            })));
+            assert_eq!(parser.next(),
+                       Some(Ok(Expression::BinaryExpr {
+                           left: Box::new(Expression::NumberLiteral(1.0)),
+                           op: op,
+                           right: Box::new(Expression::NumberLiteral(2.0)),
+                       })));
             assert_eq!(parser.next(), None);
         }
     }
@@ -365,7 +374,8 @@ mod tests {
     fn test_block() {
         let mut parser = Parser::new("{1{}2}");
 
-        assert_eq!(parser.next(), Some(Ok(Expression::Block(vec![
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::Block(vec![
             Expression::NumberLiteral(1.0),
             Expression::Block(vec![]),
             Expression::NumberLiteral(2.0),
@@ -377,13 +387,14 @@ mod tests {
     fn test_assignment() {
         let mut parser = Parser::new("x = y = z");
 
-        assert_eq!(parser.next(), Some(Ok(Expression::Assignment{
-            left: "x".to_owned(),
-            right: Box::new(Expression::Assignment{
-                left: "y".to_owned(),
-                right: Box::new(Expression::Variable("z".to_owned())),
-            }),
-        })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::Assignment {
+                       left: "x".to_owned(),
+                       right: Box::new(Expression::Assignment {
+                           left: "y".to_owned(),
+                           right: Box::new(Expression::Variable("z".to_owned())),
+                       }),
+                   })));
         assert_eq!(parser.next(), None);
     }
 
@@ -391,15 +402,16 @@ mod tests {
     fn test_if_expr() {
         let mut parser = Parser::new("if true {} else if false {}");
 
-        assert_eq!(parser.next(), Some(Ok(Expression::IfExpr{
-            cond: Box::new(Expression::BooleanLiteral(true)),
-            body: Box::new(Expression::Block(vec![])),
-            else_branch: Some(Box::new(Expression::IfExpr{
-                cond: Box::new(Expression::BooleanLiteral(false)),
-                body: Box::new(Expression::Block(vec![])),
-                else_branch: None,
-            })),
-        })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::IfExpr {
+                       cond: Box::new(Expression::BooleanLiteral(true)),
+                       body: Box::new(Expression::Block(vec![])),
+                       else_branch: Some(Box::new(Expression::IfExpr {
+                           cond: Box::new(Expression::BooleanLiteral(false)),
+                           body: Box::new(Expression::Block(vec![])),
+                           else_branch: None,
+                       })),
+                   })));
         assert_eq!(parser.next(), None);
     }
 
@@ -407,10 +419,11 @@ mod tests {
     fn test_while_loop() {
         let mut parser = Parser::new("while true {}");
 
-        assert_eq!(parser.next(), Some(Ok(Expression::WhileLoop{
-            cond: Box::new(Expression::BooleanLiteral(true)),
-            body: Box::new(Expression::Block(vec![])),
-        })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::WhileLoop {
+                       cond: Box::new(Expression::BooleanLiteral(true)),
+                       body: Box::new(Expression::Block(vec![])),
+                   })));
         assert_eq!(parser.next(), None);
     }
 
@@ -418,24 +431,26 @@ mod tests {
     fn test_precedence() {
         let mut parser = Parser::new("1 + 2 * 3  1 * 2 + 3");
 
-        assert_eq!(parser.next(), Some(Ok(Expression::BinaryExpr{
-            left: Box::new(Expression::NumberLiteral(1.0)),
-            op: BinaryOp::Add,
-            right: Box::new(Expression::BinaryExpr{
-                left: Box::new(Expression::NumberLiteral(2.0)),
-                op: BinaryOp::Mul,
-                right: Box::new(Expression::NumberLiteral(3.0)),
-            }),
-        })));
-        assert_eq!(parser.next(), Some(Ok(Expression::BinaryExpr{
-            left: Box::new(Expression::BinaryExpr{
-                left: Box::new(Expression::NumberLiteral(1.0)),
-                op: BinaryOp::Mul,
-                right: Box::new(Expression::NumberLiteral(2.0)),
-            }),
-            op: BinaryOp::Add,
-            right: Box::new(Expression::NumberLiteral(3.0)),
-        })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::BinaryExpr {
+                       left: Box::new(Expression::NumberLiteral(1.0)),
+                       op: BinaryOp::Add,
+                       right: Box::new(Expression::BinaryExpr {
+                           left: Box::new(Expression::NumberLiteral(2.0)),
+                           op: BinaryOp::Mul,
+                           right: Box::new(Expression::NumberLiteral(3.0)),
+                       }),
+                   })));
+        assert_eq!(parser.next(),
+                   Some(Ok(Expression::BinaryExpr {
+                       left: Box::new(Expression::BinaryExpr {
+                           left: Box::new(Expression::NumberLiteral(1.0)),
+                           op: BinaryOp::Mul,
+                           right: Box::new(Expression::NumberLiteral(2.0)),
+                       }),
+                       op: BinaryOp::Add,
+                       right: Box::new(Expression::NumberLiteral(3.0)),
+                   })));
         assert_eq!(parser.next(), None);
     }
 }

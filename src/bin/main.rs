@@ -12,8 +12,7 @@ fn main() {
         .arg(clap::Arg::with_name("interactive")
             .short("i")
             .long("interactive"))
-        .arg(clap::Arg::with_name("INPUT")
-            .help("An optional file to run"))
+        .arg(clap::Arg::with_name("INPUT").help("An optional file to run"))
         .get_matches();
 
     let mut program = gate::Program::new();
@@ -55,15 +54,15 @@ fn run_interactive(program: &mut gate::Program) {
                         Err(gate::ParseError::UnexpectedEOF) => {
                             needs_more_input = true;
                             break;
-                        },
+                        }
                         Err(gate::ParseError::ScanError(gate::TokenError::IncompleteString)) => {
                             needs_more_input = true;
                             break;
-                        },
+                        }
                         Err(e) => {
                             println!("{:?}", e);
                             continue 'outer;
-                        },
+                        }
                     }
                 }
             }
@@ -78,7 +77,7 @@ fn run_interactive(program: &mut gate::Program) {
                         Err(e) => {
                             println!("error: {}", e);
                             continue 'outer;
-                        },
+                        }
                     };
                 }
                 println!("{:?}", last_result);
@@ -98,11 +97,11 @@ fn run(program: &mut gate::Program, input: String) {
     let parser = gate::Parser::new(&input);
     for expr in parser {
         match expr.unwrap().eval(program) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 println!("error: {}", e);
                 break;
-            },
+            }
         }
     }
 }

@@ -1,44 +1,13 @@
-use std::{fmt, result};
+use std::result;
 
-use BinaryOp::*;
-use Data::*;
-use ExecuteError::*;
+use binary_op::BinaryOp;
+use data::Data;
+use data::Data::*;
+use error::ExecuteError;
+use error::ExecuteError::*;
+use program::Program;
+
 use Expression::*;
-use super::program::Program;
-
-#[derive(Clone,Debug,PartialEq)]
-pub enum Data {
-    Nil,
-    Boolean(bool),
-    Number(f64),
-    Str(String),
-}
-
-impl fmt::Display for Data {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Nil => write!(f, "nil"),
-            &Boolean(b) => write!(f, "{}", b),
-            &Number(n) => write!(f, "{}", n),
-            &Str(ref s) => write!(f, "{}", s),
-        }
-    }
-}
-
-#[derive(Clone,Debug,PartialEq)]
-pub enum ExecuteError {
-    UndefinedVar(String),
-    UndefinedFunc(String),
-}
-
-impl fmt::Display for ExecuteError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &UndefinedVar(ref s) => write!(f, "undefined variable \"{}\"", s),
-            &UndefinedFunc(ref s) => write!(f, "undefined function \"{}\"", s),
-        }
-    }
-}
 
 pub type Result = result::Result<Data, ExecuteError>;
 
@@ -51,11 +20,25 @@ pub enum Expression {
     Variable(String),
     ParenExpr(Box<Expression>),
     Block(Vec<Expression>),
-    Assignment{left: String, right: Box<Expression>},
-    FunctionCall{name: String, args: Vec<Expression>},
-    BinaryExpr{left: Box<Expression>, op: BinaryOp, right: Box<Expression>},
-    IfExpr{cond: Box<Expression>, body: Box<Expression>, else_branch: Option<Box<Expression>>},
-    WhileLoop{cond: Box<Expression>, body: Box<Expression>},
+    Assignment {
+        left: String,
+        right: Box<Expression>,
+    },
+    FunctionCall { name: String, args: Vec<Expression> },
+    BinaryExpr {
+        left: Box<Expression>,
+        op: BinaryOp,
+        right: Box<Expression>,
+    },
+    IfExpr {
+        cond: Box<Expression>,
+        body: Box<Expression>,
+        else_branch: Option<Box<Expression>>,
+    },
+    WhileLoop {
+        cond: Box<Expression>,
+        body: Box<Expression>,
+    },
 }
 
 impl Expression {
@@ -70,7 +53,7 @@ impl Expression {
                     Some(d) => Ok(d.clone()),
                     None => Err(UndefinedVar(name.clone())),
                 }
-            },
+            }
             &ParenExpr(ref expr) => expr.eval(p),
             &Block(ref exprs) => {
                 let mut last_result = Ok(Data::Nil);
@@ -82,13 +65,13 @@ impl Expression {
                 p.pop_scope();
 
                 last_result
-            },
-            &Assignment{ref left, ref right} => {
+            }
+            &Assignment { ref left, ref right } => {
                 let res = try!(right.eval(p));
                 p.set_var(left, res.clone());
                 Ok(res)
-            },
-            &FunctionCall{ref name, ref args} => {
+            }
+            &FunctionCall { ref name, ref args } => {
                 let f = match name.as_ref() {
                     "println" => println,
                     _ => return Err(UndefinedFunc(name.clone())),
@@ -100,12 +83,12 @@ impl Expression {
                 }
 
                 f(&new_args)
-            },
-            &BinaryExpr{ref left, ref op, ref right} => {
+            }
+            &BinaryExpr { ref left, ref op, ref right } => {
                 let (left_data, right_data) = (try!(left.eval(p)), try!(right.eval(p)));
                 op.eval(&left_data, &right_data)
-            },
-            &IfExpr{ref cond, ref body, ref else_branch} => {
+            }
+            &IfExpr { ref cond, ref body, ref else_branch } => {
                 if try!(cond.eval(p)) != Boolean(false) {
                     body.eval(p)
                 } else if let &Some(ref b) = else_branch {
@@ -113,67 +96,19 @@ impl Expression {
                 } else {
                     Ok(Nil)
                 }
-            },
-            &WhileLoop{ref cond, ref body} => {
+            }
+            &WhileLoop { ref cond, ref body } => {
                 let mut last_data = Ok(Nil);
                 loop {
                     if let Boolean(false) = try!(cond.eval(p)) {
-                        break
+                        break;
                     }
 
                     last_data = body.eval(p);
                 }
 
                 last_data
-            },
-        }
-    }
-}
-
-#[derive(Clone,Debug,PartialEq)]
-pub enum BinaryOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Eq,
-    Lt,
-    LtEq,
-    Gt,
-    GtEq,
-}
-
-impl BinaryOp {
-    fn eval(&self, left: &Data, right: &Data) -> Result {
-        let answer = match (self, left, right) {
-            (&Add, &Number(l), &Number(r)) => Number(l+r),
-            (&Sub, &Number(l), &Number(r)) => Number(l-r),
-            (&Mul, &Number(l), &Number(r)) => Number(l*r),
-            (&Div, &Number(l), &Number(r)) => Number(l/r),
-            (&Mod, &Number(l), &Number(r)) => Number(l%r),
-            (&Eq, _, _) => Boolean(left == right),
-            (&Lt, &Number(l), &Number(r)) => Boolean(l < r),
-            (&LtEq, &Number(l), &Number(r)) => Boolean(l <= r),
-            (&Gt, &Number(l), &Number(r)) => Boolean(l > r),
-            (&GtEq, &Number(l), &Number(r)) => Boolean(l >= r),
-            _ => Nil,
-        };
-        Ok(answer)
-    }
-
-    pub fn precendence(&self) -> u8 {
-        match self {
-            &Add => 3,
-            &Sub => 3,
-            &Mul => 4,
-            &Div => 4,
-            &Mod => 2,
-            &Eq => 0,
-            &Lt => 1,
-            &LtEq => 1,
-            &Gt => 1,
-            &GtEq => 1,
+            }
         }
     }
 }
@@ -188,12 +123,13 @@ pub fn println(v: &Vec<Data>) -> Result {
 
 #[cfg(test)]
 mod tests {
+    use binary_op::BinaryOp::*;
+    use data::Data::*;
+    use error::ExecuteError::*;
+    use program::*;
+
     use super::*;
-    use super::BinaryOp::*;
-    use super::Data::*;
-    use super::ExecuteError::*;
     use super::Expression::*;
-    use super::super::program::*;
 
     #[test]
     fn test_variables() {
@@ -241,7 +177,10 @@ mod tests {
 
     #[test]
     fn test_undefined_func() {
-        let ast = FunctionCall{name: "foo".to_owned(), args: vec![]};
+        let ast = FunctionCall {
+            name: "foo".to_owned(),
+            args: vec![],
+        };
         let mut p = Program::new();
         let res = ast.eval(&mut p);
         assert_eq!(Err(UndefinedFunc("foo".to_owned())), res);
@@ -249,12 +188,10 @@ mod tests {
 
     #[test]
     fn test_paren_expr() {
-        let expr = Expression::ParenExpr(
-            Box::new(Expression::BooleanLiteral(true)),
-        );
+        let expr = Expression::ParenExpr(Box::new(Expression::BooleanLiteral(true)));
 
         let mut p = Program::new();
-        assert_eq!(expr.eval(&mut p).unwrap(), Data::Boolean(true));
+        assert_eq!(expr.eval(&mut p).unwrap(), Boolean(true));
     }
 
     #[test]
@@ -266,7 +203,7 @@ mod tests {
         ]);
 
         let mut p = Program::new();
-        assert_eq!(block.eval(&mut p).unwrap(), Data::Number(3.0));
+        assert_eq!(block.eval(&mut p).unwrap(), Number(3.0));
     }
 
     #[test]
@@ -281,7 +218,7 @@ mod tests {
             Expression::Variable("x".to_owned()),
         ]);
 
-        let assign = Expression::Assignment{
+        let assign = Expression::Assignment {
             left: "x".to_owned(),
             right: Box::new(Expression::BooleanLiteral(true)),
         };
@@ -375,23 +312,28 @@ mod tests {
     #[test]
     fn test_while_loop() {
         let mut p = Program::new();
-        p.eval(&Assignment{left: "x".to_owned(), right: Box::new(NumberLiteral(0.0))}).unwrap();
-        
-        let out = p.eval(&WhileLoop {
-            cond: Box::new(BinaryExpr {
-                left: Box::new(Variable("x".to_owned())),
-                op: Lt,
-                right: Box::new(NumberLiteral(5.0)),
-            }),
-            body: Box::new(Assignment {
+        p.eval(&Assignment {
                 left: "x".to_owned(),
-                right: Box::new(BinaryExpr {
+                right: Box::new(NumberLiteral(0.0)),
+            })
+            .unwrap();
+
+        let out = p.eval(&WhileLoop {
+                cond: Box::new(BinaryExpr {
                     left: Box::new(Variable("x".to_owned())),
-                    op: Add,
-                    right: Box::new(NumberLiteral(1.0)),
+                    op: Lt,
+                    right: Box::new(NumberLiteral(5.0)),
                 }),
-            }),
-        }).unwrap();
+                body: Box::new(Assignment {
+                    left: "x".to_owned(),
+                    right: Box::new(BinaryExpr {
+                        left: Box::new(Variable("x".to_owned())),
+                        op: Add,
+                        right: Box::new(NumberLiteral(1.0)),
+                    }),
+                }),
+            })
+            .unwrap();
 
         assert_eq!(out, Number(5.0));
         assert_eq!(p.eval(&Variable("x".to_owned())).unwrap(), Number(5.0));

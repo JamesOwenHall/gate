@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use super::ast::{Data, Expression, Result};
+use ast::{Expression, Result};
+use data::Data;
 
 pub struct Program {
     pub scopes: ScopeTree,
@@ -8,9 +9,7 @@ pub struct Program {
 
 impl Program {
     pub fn new() -> Self {
-        Program {
-            scopes: ScopeTree::new(),
-        }
+        Program { scopes: ScopeTree::new() }
     }
 
     pub fn eval(&mut self, e: &Expression) -> Result {
@@ -41,7 +40,7 @@ pub struct ScopeTree {
 
 impl ScopeTree {
     fn new() -> Self {
-        ScopeTree{frames: vec![Scope::new()]}
+        ScopeTree { frames: vec![Scope::new()] }
     }
 
     fn var(&self, name: &str) -> Option<Data> {
@@ -61,8 +60,8 @@ impl ScopeTree {
                 Some(v) => {
                     *v = val;
                     return;
-                },
-                None => {},
+                }
+                None => {}
             }
         }
 
@@ -77,6 +76,6 @@ struct Scope {
 
 impl Scope {
     fn new() -> Self {
-        Scope{vars: HashMap::new()}
+        Scope { vars: HashMap::new() }
     }
 }
