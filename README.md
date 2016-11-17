@@ -1,4 +1,7 @@
 # Gate
+
+[![Build Status](https://travis-ci.org/JamesOwenHall/gate.svg?branch=master)](https://travis-ci.org/JamesOwenHall/gate)
+
 A dynamically typed interpreted language written in Rust.
 
 ## Usage
