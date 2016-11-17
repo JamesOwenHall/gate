@@ -1,1 +1,3 @@
+#!/usr/bin/env gate
+
 println("Hello world!")

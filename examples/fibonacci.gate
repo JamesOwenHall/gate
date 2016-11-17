@@ -1,3 +1,5 @@
+#!/usr/bin/env gate
+
 # Start the sequence with 0 and 1 as the first two numbers.
 a = 0
 b = 1
