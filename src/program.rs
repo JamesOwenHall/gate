@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use ast::{Expression, Result};
 use data::Data;
+use expr::{Expression, Result};
 
 pub struct Program {
     pub scopes: ScopeTree,

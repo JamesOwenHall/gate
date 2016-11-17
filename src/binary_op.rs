@@ -1,6 +1,6 @@
-use ast::Result;
 use data::Data;
 use data::Data::*;
+use expr::Result;
 
 use BinaryOp::*;
 
