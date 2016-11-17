@@ -3,10 +3,10 @@ b = 1
 
 count = 0
 while count < 10 {
-	old_a = a
-	a = b
-	b = old_a + b
+    old_a = a
+    a = b
+    b = old_a + b
 
-	println(a)
-	count = count + 1
+    println(a)
+    count = count + 1
 }
