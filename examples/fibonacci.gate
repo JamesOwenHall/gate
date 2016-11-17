@@ -1,12 +1,15 @@
+# Start the sequence with 0 and 1 as the first two numbers.
 a = 0
 b = 1
 
 count = 0
 while count < 10 {
+    # Store the value of a so it can be added to b after a is modified.
     old_a = a
     a = b
     b = old_a + b
 
+    # Print the value at each iteration.
     println(a)
     count = count + 1
 }

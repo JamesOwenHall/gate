@@ -62,6 +62,15 @@ impl<'a> Scanner<'a> {
         Scanner { input: input.chars().peekable() }
     }
 
+    fn read_rest_of_line(&mut self) {
+        loop {
+            match self.input.next() {
+                Some('\n') => return,
+                _ => {},
+            }
+        }
+    }
+
     fn read_word(&mut self) -> Token {
         let mut word = String::new();
         while let Some(&c) = self.input.peek() {
@@ -156,6 +165,14 @@ impl<'a> Iterator for Scanner<'a> {
     type Item = Result<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.input.peek() {
+                Some(&c) if Self::is_space(c) => {self.input.next();},
+                Some(&'#') => {self.read_rest_of_line();},
+                _ => break,
+            }
+        }
+
         while let Some(&c) = self.input.peek() {
             if Self::is_space(c) {
                 self.input.next();
@@ -320,6 +337,12 @@ mod tests {
         assert_eq!(s.next(), Some(Ok(String("".to_owned()))));
         assert_eq!(s.next(), Some(Ok(String("Foo bar".to_owned()))));
         assert_eq!(s.next(), Some(Ok(String(r#""\"#.to_owned()))));
+        assert_eq!(s.next(), None);
+    }
+
+    #[test]
+    fn test_comment() {
+        let mut s = Scanner::new("#!/usr/bin/gate\n   # foo\n");
         assert_eq!(s.next(), None);
     }
 }
