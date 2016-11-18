@@ -17,6 +17,15 @@ impl Data {
             _ => true,
         }
     }
+
+    pub fn type_name(&self) -> String {
+        match self {
+            &Nil => "nil".to_owned(),
+            &Boolean(_) => "boolean".to_owned(),
+            &Number(_) => "number".to_owned(),
+            &Str(_) => "string".to_owned(),
+        }
+    }
 }
 
 impl fmt::Display for Data {

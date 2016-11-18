@@ -107,62 +107,6 @@ fn test_block_scope() {
 }
 
 #[test]
-fn test_binary_expr() {
-    let cases = vec![
-        // Add
-        (Add, Number(1.0), Number(2.0), Number(3.0)),
-        (Add, Boolean(false), Number(2.0), Nil),
-        (Add, Number(2.0), Str("1.0".to_owned()), Nil),
-        // Sub
-        (Sub, Number(1.0), Number(2.0), Number(-1.0)),
-        (Sub, Boolean(false), Number(2.0), Nil),
-        (Sub, Number(2.0), Str("1.0".to_owned()), Nil),
-        // Mul
-        (Mul, Number(1.5), Number(2.0), Number(3.0)),
-        (Mul, Boolean(false), Number(2.0), Nil),
-        (Mul, Number(2.0), Str("1.0".to_owned()), Nil),
-        // Div
-        (Div, Number(1.0), Number(2.0), Number(0.5)),
-        (Div, Boolean(false), Number(2.0), Nil),
-        (Div, Number(2.0), Str("1.0".to_owned()), Nil),
-        // Mod
-        (Mod, Number(17.0), Number(4.0), Number(1.0)),
-        (Mod, Boolean(false), Number(2.0), Nil),
-        (Mod, Number(2.0), Str("1.0".to_owned()), Nil),
-        // Eq
-        (Eq, Number(2.0), Number(2.0), Boolean(true)),
-        (Eq, Number(-2.0), Number(2.0), Boolean(false)),
-        (Eq, Str("foo".to_owned()), Str("foo".to_owned()), Boolean(true)),
-        (Eq, Str("foo".to_owned()), Str("bar".to_owned()), Boolean(false)),
-        (Eq, Boolean(false), Boolean(false), Boolean(true)),
-        (Eq, Boolean(true), Boolean(true), Boolean(true)),
-        (Eq, Boolean(true), Boolean(false), Boolean(false)),
-        (Eq, Nil, Boolean(false), Boolean(false)),
-        (Eq, Nil, Nil, Boolean(true)),
-        // Lt
-        (Lt, Number(-1.0), Number(0.5), Boolean(true)),
-        (Lt, Number(1.0), Number(1.0), Boolean(false)),
-        (Lt, Number(1.0), Number(0.5), Boolean(false)),
-        // LtEq
-        (LtEq, Number(-1.0), Number(0.5), Boolean(true)),
-        (LtEq, Number(1.0), Number(1.0), Boolean(true)),
-        (LtEq, Number(1.0), Number(0.5), Boolean(false)),
-        // Gt
-        (Gt, Number(-1.0), Number(0.5), Boolean(false)),
-        (Gt, Number(1.0), Number(1.0), Boolean(false)),
-        (Gt, Number(1.0), Number(0.5), Boolean(true)),
-        // GtEq
-        (GtEq, Number(-1.0), Number(0.5), Boolean(false)),
-        (GtEq, Number(1.0), Number(1.0), Boolean(true)),
-        (GtEq, Number(1.0), Number(0.5), Boolean(true)),
-    ];
-
-    for (op, left, right, exp) in cases {
-        assert_eq!(op.eval(&left, &right).unwrap(), exp);
-    }
-}
-
-#[test]
 fn test_if_expr() {
     let mut p = Program::new();
 
