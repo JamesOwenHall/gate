@@ -171,6 +171,7 @@ fn test_if_expr() {
         (BooleanLiteral(true), NumberLiteral(1.0), Some(NumberLiteral(2.0)), Number(1.0)),
         (BooleanLiteral(false), NumberLiteral(1.0), None, Nil),
         (BooleanLiteral(false), NumberLiteral(1.0), Some(NumberLiteral(2.0)), Number(2.0)),
+        (NilLiteral, NumberLiteral(1.0), Some(NumberLiteral(2.0)), Number(2.0)),
     ];
 
     for (cond, body, else_branch, exp) in cases {

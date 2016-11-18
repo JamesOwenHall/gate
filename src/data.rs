@@ -10,6 +10,15 @@ pub enum Data {
     Str(String),
 }
 
+impl Data {
+    pub fn to_bool(&self) -> bool {
+        match self {
+            &Nil | &Boolean(false) => false,
+            _ => true,
+        }
+    }
+}
+
 impl fmt::Display for Data {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

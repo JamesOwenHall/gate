@@ -89,7 +89,7 @@ impl Expression {
                 op.eval(&left_data, &right_data)
             }
             &IfExpr { ref cond, ref body, ref else_branch } => {
-                if try!(cond.eval(p)) != Boolean(false) {
+                if cond.eval(p)?.to_bool() {
                     body.eval(p)
                 } else if let &Some(ref b) = else_branch {
                     b.eval(p)
@@ -99,14 +99,9 @@ impl Expression {
             }
             &WhileLoop { ref cond, ref body } => {
                 let mut last_data = Ok(Nil);
-                loop {
-                    if let Boolean(false) = try!(cond.eval(p)) {
-                        break;
-                    }
-
+                while cond.eval(p)?.to_bool() {
                     last_data = body.eval(p);
                 }
-
                 last_data
             }
         }
