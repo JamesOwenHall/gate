@@ -66,7 +66,7 @@ impl<'a> Scanner<'a> {
         loop {
             match self.input.next() {
                 Some('\n') => return,
-                _ => {},
+                _ => {}
             }
         }
     }
@@ -167,8 +167,12 @@ impl<'a> Iterator for Scanner<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.input.peek() {
-                Some(&c) if Self::is_space(c) => {self.input.next();},
-                Some(&'#') => {self.read_rest_of_line();},
+                Some(&c) if Self::is_space(c) => {
+                    self.input.next();
+                }
+                Some(&'#') => {
+                    self.read_rest_of_line();
+                }
                 _ => break,
             }
         }

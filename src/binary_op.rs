@@ -34,11 +34,13 @@ impl BinaryOp {
             (&LtEq, &Number(l), &Number(r)) => Ok(Boolean(l <= r)),
             (&Gt, &Number(l), &Number(r)) => Ok(Boolean(l > r)),
             (&GtEq, &Number(l), &Number(r)) => Ok(Boolean(l >= r)),
-            (o, l, r) => Err(ExecuteError::InvalidOperation{
-                left: l.type_name(),
-                op: o.clone(),
-                right: r.type_name(),
-            }),
+            (o, l, r) => {
+                Err(ExecuteError::InvalidOperation {
+                    left: l.type_name(),
+                    op: o.clone(),
+                    right: r.type_name(),
+                })
+            }
         }
     }
 
@@ -123,10 +125,11 @@ mod tests {
         }
 
         // Invalid operation
-        assert_eq!(Add.eval(&Number(1.0), &Boolean(false)), Err(InvalidOperation{
-            left: "number".to_owned(),
-            op: Add,
-            right: "boolean".to_owned(),
-        }));
+        assert_eq!(Add.eval(&Number(1.0), &Boolean(false)),
+                   Err(InvalidOperation {
+                       left: "number".to_owned(),
+                       op: Add,
+                       right: "boolean".to_owned(),
+                   }));
     }
 }
