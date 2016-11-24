@@ -5,6 +5,7 @@ mod expr;
 mod parser;
 mod program;
 mod scanner;
+mod scope;
 
 #[cfg(test)]
 mod expr_test;
