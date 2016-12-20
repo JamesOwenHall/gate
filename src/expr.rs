@@ -67,7 +67,7 @@ impl Expression {
                 last_result
             }
             &Assignment { ref left, ref right } => {
-                let res = try!(right.eval(p));
+                let res = right.eval(p)?;
                 p.set_var(left, res.clone());
                 Ok(res)
             }
@@ -79,13 +79,13 @@ impl Expression {
 
                 let mut new_args = Vec::new();
                 for item in args.iter() {
-                    new_args.push(try!(item.eval(p)));
+                    new_args.push(item.eval(p)?);
                 }
 
                 f(&new_args)
             }
             &BinaryExpr { ref left, ref op, ref right } => {
-                let (left_data, right_data) = (try!(left.eval(p)), try!(right.eval(p)));
+                let (left_data, right_data) = (left.eval(p)?, right.eval(p)?);
                 op.eval(&left_data, &right_data)
             }
             &IfExpr { ref cond, ref body, ref else_branch } => {
